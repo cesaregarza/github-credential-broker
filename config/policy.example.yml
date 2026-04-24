@@ -1,0 +1,37 @@
+version: 1
+
+defaults:
+  audit_claims:
+    - repository
+    - ref
+    - environment
+    - workflow_ref
+    - job_workflow_ref
+    - run_id
+    - run_attempt
+
+bundles:
+  splattop-deploy:
+    description: SplatTop production deploy credentials.
+    allow:
+      - repository: cesaregarza/SplatTop
+        ref: refs/heads/main
+        environment: SplatTop
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        env: SPLATTOP_DO_TOKEN
+      CONFIG_REPO_TOKEN:
+        env: SPLATTOP_CONFIG_REPO_TOKEN
+
+  splatvote-deploy:
+    description: SplatVote production deploy credentials.
+    allow:
+      - repository: cesaregarza/SplatVote
+        ref: refs/heads/main
+        environment: default
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        env: SPLATVOTE_DO_TOKEN
+      CONFIG_REPO_TOKEN:
+        env: SPLATVOTE_CONFIG_REPO_TOKEN
+

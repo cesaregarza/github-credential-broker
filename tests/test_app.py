@@ -55,7 +55,7 @@ def test_credentials_endpoint_returns_allowed_bundle(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
-    assert response.headers["pragma"] == "no-cache"
+    assert "pragma" not in response.headers
     assert response.json() == {
         "bundle": "deploy",
         "audit": {
@@ -102,6 +102,34 @@ def test_credentials_endpoint_denies_wrong_ref(tmp_path, monkeypatch):
         )
 
     assert response.status_code == 403
+
+
+def test_healthz_returns_ok(tmp_path, monkeypatch):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                secrets:
+                  TOKEN:
+                    env: REAL_TOKEN
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BROKER_POLICY_PATH", str(policy_path))
+    monkeypatch.setenv("REAL_TOKEN", "secret-value")
+
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
 
 
 def test_docs_are_not_exposed_by_default(tmp_path, monkeypatch):

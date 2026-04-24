@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 import jwt
-from jwt import PyJWKClient
+from jwt import PyJWKClient, PyJWKClientConnectionError, PyJWKClientError
 
-from github_credential_broker.errors import AuthenticationError
+from github_credential_broker.errors import AuthenticationError, ConfigurationError
 from github_credential_broker.settings import Settings
 
 DEFAULT_MAX_BEARER_TOKEN_LENGTH = 16384
@@ -29,8 +29,12 @@ class GitHubOIDCVerifier:
                 algorithms=["RS256"],
                 audience=self._settings.github_oidc_audience,
                 issuer=self._settings.github_oidc_issuer,
-                options={"require": ["aud", "exp", "iat", "iss", "sub"]},
+                options={"require": ["aud", "exp", "iat", "iss", "nbf", "sub"]},
             )
+        except PyJWKClientConnectionError as exc:
+            raise ConfigurationError("unable to fetch GitHub OIDC signing keys") from exc
+        except PyJWKClientError as exc:
+            raise AuthenticationError("invalid GitHub OIDC token") from exc
         except jwt.PyJWTError as exc:
             raise AuthenticationError("invalid GitHub OIDC token") from exc
 

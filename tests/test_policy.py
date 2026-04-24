@@ -150,6 +150,63 @@ def test_invalid_policy_rejects_repository_glob(tmp_path):
         load_policy(policy_path)
 
 
+def test_strict_mode_requires_repository_id(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            strict: true
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                    ref: refs/heads/main
+                secrets:
+                  TOKEN:
+                    env: TOKEN
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="repository_id"):
+        load_policy(policy_path)
+
+
+def test_strict_mode_accepts_policy_with_repository_id(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            strict: true
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                    repository_id: "12345"
+                    ref: refs/heads/main
+                secrets:
+                  TOKEN:
+                    env: TOKEN
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    policy = load_policy(policy_path)
+    assert policy.strict is True
+    authorize_bundle(
+        policy.require_bundle("deploy"),
+        {
+            "repository": "cesaregarza/SplatTop",
+            "repository_id": "12345",
+            "ref": "refs/heads/main",
+        },
+    )
+
+
 def test_invalid_policy_rejects_unsafe_secret_names(tmp_path):
     policy_path = tmp_path / "policy.yml"
     policy_path.write_text(

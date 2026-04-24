@@ -34,6 +34,7 @@ class Bundle:
 @dataclass(frozen=True)
 class Policy:
     version: int
+    strict: bool
     audit_claims: tuple[str, ...]
     bundles: dict[str, Bundle]
 
@@ -54,6 +55,10 @@ def load_policy(path: Path) -> Policy:
 
     if raw.get("version") != 1:
         raise ConfigurationError("policy version must be 1")
+
+    strict = raw.get("strict", False)
+    if not isinstance(strict, bool):
+        raise ConfigurationError("strict must be a boolean")
 
     defaults = _mapping(raw.get("defaults", {}), "defaults")
     audit_claims_raw = defaults.get("audit_claims", [])
@@ -94,6 +99,11 @@ def load_policy(path: Path) -> Policy:
                         f"bundles.{bundle_name}.allow[{idx}].{claim_name} cannot use wildcards"
                     )
                 normalized_rule[claim_name] = expected
+            if strict and "repository_id" not in normalized_rule:
+                raise ConfigurationError(
+                    f"bundles.{bundle_name}.allow[{idx}] must include repository_id "
+                    "when policy strict mode is enabled"
+                )
             allow.append(normalized_rule)
 
         secrets_raw = _mapping(bundle_raw.get("secrets", {}), f"bundles.{bundle_name}.secrets")
@@ -121,7 +131,12 @@ def load_policy(path: Path) -> Policy:
             secrets=tuple(secrets),
         )
 
-    return Policy(version=1, audit_claims=tuple(audit_claims_raw), bundles=bundles)
+    return Policy(
+        version=1,
+        strict=strict,
+        audit_claims=tuple(audit_claims_raw),
+        bundles=bundles,
+    )
 
 
 def authorize_bundle(bundle: Bundle, claims: dict[str, Any]) -> None:

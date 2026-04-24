@@ -21,17 +21,30 @@ vault token. They request a GitHub OIDC token and present it to this broker.
 
 ```text
 GitHub Actions job
-  -> requests OIDC token for audience github-credential-broker
+  -> requests OIDC token for the broker's deployment-specific audience
   -> POST /v1/credentials/{bundle}
   -> broker validates token and policy
   -> broker returns only the allowed secret bundle
 ```
+
+## Configuration
+
+The broker is configured via environment variables prefixed with `BROKER_`.
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `BROKER_POLICY_PATH` | yes | `config/policy.yml` | Path to the policy file. |
+| `BROKER_GITHUB_OIDC_AUDIENCE` | **yes** | — | Audience callers must request. **Pick a unique value per deployment** (e.g. `https://broker.example.com/v1`). A unique audience prevents both cross-broker token replay and trivial attacks where a third-party workflow mints a token for a guessable audience. |
+| `BROKER_GITHUB_OIDC_ISSUER` | no | GitHub's issuer | Override only if you proxy GitHub's OIDC. |
+| `BROKER_GITHUB_OIDC_JWKS_URL` | no | GitHub's JWKS | Override only if you proxy GitHub's OIDC. |
+| `BROKER_EXPOSE_DOCS` | no | `false` | Set `true` to enable `/docs` and `/openapi.json`. Do not enable in production. |
 
 ## Run Locally
 
 ```bash
 uv sync
 export BROKER_POLICY_PATH=config/policy.example.yml
+export BROKER_GITHUB_OIDC_AUDIENCE="https://broker.example.com/v1"
 export SPLATTOP_DO_TOKEN=dummy
 export SPLATTOP_CONFIG_REPO_TOKEN=dummy
 uv run uvicorn github_credential_broker.app:create_app --factory --host 127.0.0.1 --port 8080
@@ -49,11 +62,20 @@ secret values:
 docker build -t github-credential-broker .
 docker run --rm -p 8080:8080 \
   -e BROKER_POLICY_PATH=/app/config/policy.yml \
+  -e BROKER_GITHUB_OIDC_AUDIENCE="https://broker.example.com/v1" \
   -e SPLATTOP_DO_TOKEN=... \
   -e SPLATTOP_CONFIG_REPO_TOKEN=... \
   -v "$PWD/config/policy.example.yml:/app/config/policy.yml:ro" \
   github-credential-broker
 ```
+
+In production, also:
+
+- Put the broker behind a reverse proxy that enforces TLS and a per-IP rate
+  limit. The broker has no built-in rate limiting.
+- Ship audit logs to a durable sink. The broker emits an info log per issued
+  bundle with the policy-defined audit claims; if the container is lost or
+  evicted, those records are gone.
 
 For production, put it behind HTTPS. The endpoint can be public because requests
 are denied unless the GitHub OIDC JWT validates and matches policy, but the
@@ -81,7 +103,7 @@ jobs:
           token_json="$(
             curl -sSf \
               -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-credential-broker"
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://broker.example.com/v1"
           )"
           token="$(jq -r .value <<< "$token_json")"
           echo "::add-mask::$token"
@@ -125,7 +147,11 @@ Policy is intentionally strict:
 
 For high-sensitivity bundles, prefer adding stable GitHub identity claims such
 as `repository_id` and `repository_owner_id` alongside human-readable
-`repository` and `ref` checks.
+`repository` and `ref` checks. Repository names and org names can be transferred
+or renamed; numeric IDs cannot.
+
+Set `strict: true` at the top of the policy file to require `repository_id` in
+every allow rule. The broker will refuse to start if any rule is missing it.
 
 For reusable workflows, prefer adding `job_workflow_ref` to policy rules once
 the caller repos migrate to `cesaregarza/.github`, for example:

@@ -66,14 +66,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def healthz() -> HealthResponse:
         return HealthResponse(ok=True)
 
+    bundle_path = Path(
+        min_length=1,
+        max_length=settings.max_bundle_name_length,
+        pattern=_BUNDLE_RE.pattern,
+    )
+
     @app.post("/v1/credentials/{bundle_name}", response_model=CredentialsResponse)
     async def credentials(
         request: Request,
         response: Response,
-        bundle_name: Annotated[
-            str,
-            Path(min_length=1, max_length=80, pattern=_BUNDLE_RE.pattern),
-        ],
+        bundle_name: str = bundle_path,
         authorization: Annotated[str | None, Header(alias="Authorization")] = None,
     ) -> CredentialsResponse:
         broker: BrokerState = request.app.state.broker
@@ -109,10 +112,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             extra={"bundle": bundle_name, "audit": audit},
         )
         response.headers["Cache-Control"] = "no-store"
-        response.headers["Pragma"] = "no-cache"
         return CredentialsResponse(bundle=bundle_name, audit=audit, secrets=secrets)
 
     return app
-
-
-app = create_app()

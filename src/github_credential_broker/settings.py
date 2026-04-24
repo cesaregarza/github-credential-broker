@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     policy_path: Path = Field(default=Path("config/policy.yml"))
     expose_docs: bool = False
     github_oidc_issuer: str = "https://token.actions.githubusercontent.com"
-    github_oidc_audience: str = "github-credential-broker"
+    github_oidc_audience: str = Field(min_length=1)
     github_oidc_jwks_url: str = (
         "https://token.actions.githubusercontent.com/.well-known/jwks"
     )

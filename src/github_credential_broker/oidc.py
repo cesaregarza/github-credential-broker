@@ -8,6 +8,8 @@ from jwt import PyJWKClient
 from github_credential_broker.errors import AuthenticationError
 from github_credential_broker.settings import Settings
 
+DEFAULT_MAX_BEARER_TOKEN_LENGTH = 16384
+
 
 class GitHubOIDCVerifier:
     def __init__(self, settings: Settings) -> None:
@@ -37,12 +39,20 @@ class GitHubOIDCVerifier:
         return payload
 
 
-def extract_bearer_token(authorization_header: str | None) -> str:
+def extract_bearer_token(
+    authorization_header: str | None,
+    *,
+    max_length: int = DEFAULT_MAX_BEARER_TOKEN_LENGTH,
+) -> str:
     if not authorization_header:
         raise AuthenticationError("missing bearer token")
+    if len(authorization_header) > max_length + len("Bearer "):
+        raise AuthenticationError("bearer token is too large")
 
     scheme, _, value = authorization_header.partition(" ")
     if scheme.lower() != "bearer" or not value.strip():
         raise AuthenticationError("missing bearer token")
-    return value.strip()
-
+    token = value.strip()
+    if len(token) > max_length:
+        raise AuthenticationError("bearer token is too large")
+    return token

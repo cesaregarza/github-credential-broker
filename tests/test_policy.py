@@ -84,6 +84,29 @@ def test_authorize_denies_missing_claim(tmp_path):
         authorize_bundle(policy.require_bundle("deploy"), {"repository": "cesaregarza/SplatTop"})
 
 
+def test_authorize_denies_non_string_claim(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                secrets:
+                  TOKEN:
+                    env: TOKEN
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    policy = load_policy(policy_path)
+    with pytest.raises(AuthorizationError):
+        authorize_bundle(policy.require_bundle("deploy"), {"repository": ["cesaregarza/SplatTop"]})
+
+
 def test_invalid_policy_requires_non_empty_allow(tmp_path):
     policy_path = tmp_path / "policy.yml"
     policy_path.write_text(
@@ -104,3 +127,46 @@ def test_invalid_policy_requires_non_empty_allow(tmp_path):
     with pytest.raises(ConfigurationError):
         load_policy(policy_path)
 
+
+def test_invalid_policy_rejects_repository_glob(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/*
+                secrets:
+                  TOKEN:
+                    env: TOKEN
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="repository cannot use wildcards"):
+        load_policy(policy_path)
+
+
+def test_invalid_policy_rejects_unsafe_secret_names(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                secrets:
+                  TOKEN-WITH-DASH:
+                    env: TOKEN
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="shell-safe variable names"):
+        load_policy(policy_path)

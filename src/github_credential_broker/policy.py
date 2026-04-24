@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -8,6 +9,12 @@ from typing import Any
 import yaml
 
 from github_credential_broker.errors import AuthorizationError, ConfigurationError
+
+_BUNDLE_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
+_CLAIM_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_SECRET_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_GLOB_ALLOWED_CLAIMS = frozenset({"ref", "workflow_ref", "job_workflow_ref"})
+_GLOB_CHARS = frozenset("*?[")
 
 
 @dataclass(frozen=True)
@@ -58,8 +65,10 @@ def load_policy(path: Path) -> Policy:
     bundles_raw = _mapping(raw.get("bundles", {}), "bundles")
     bundles: dict[str, Bundle] = {}
     for bundle_name, bundle_raw_any in bundles_raw.items():
-        if not isinstance(bundle_name, str) or not bundle_name:
-            raise ConfigurationError("bundle names must be non-empty strings")
+        if not isinstance(bundle_name, str) or not _BUNDLE_NAME_RE.fullmatch(bundle_name):
+            raise ConfigurationError(
+                "bundle names must be 1-80 characters of letters, numbers, '.', '_', or '-'"
+            )
         bundle_raw = _mapping(bundle_raw_any, f"bundles.{bundle_name}")
 
         allow_raw = bundle_raw.get("allow", [])
@@ -76,6 +85,14 @@ def load_policy(path: Path) -> Policy:
                     raise ConfigurationError(
                         f"bundles.{bundle_name}.allow[{idx}] entries must be strings"
                     )
+                if not _CLAIM_NAME_RE.fullmatch(claim_name):
+                    raise ConfigurationError(
+                        f"bundles.{bundle_name}.allow[{idx}] claim names must be simple strings"
+                    )
+                if _has_glob(expected) and claim_name not in _GLOB_ALLOWED_CLAIMS:
+                    raise ConfigurationError(
+                        f"bundles.{bundle_name}.allow[{idx}].{claim_name} cannot use wildcards"
+                    )
                 normalized_rule[claim_name] = expected
             allow.append(normalized_rule)
 
@@ -84,15 +101,16 @@ def load_policy(path: Path) -> Policy:
             raise ConfigurationError(f"bundles.{bundle_name}.secrets must be non-empty")
         secrets: list[SecretSpec] = []
         for public_name, spec_any in secrets_raw.items():
-            if not isinstance(public_name, str) or not public_name:
+            if not isinstance(public_name, str) or not _SECRET_NAME_RE.fullmatch(public_name):
                 raise ConfigurationError(
-                    f"bundles.{bundle_name}.secrets keys must be non-empty strings"
+                    f"bundles.{bundle_name}.secrets keys must be shell-safe variable names"
                 )
             spec = _mapping(spec_any, f"bundles.{bundle_name}.secrets.{public_name}")
             env_name = spec.get("env")
-            if not isinstance(env_name, str) or not env_name:
+            if not isinstance(env_name, str) or not _SECRET_NAME_RE.fullmatch(env_name):
                 raise ConfigurationError(
-                    f"bundles.{bundle_name}.secrets.{public_name}.env is required"
+                    f"bundles.{bundle_name}.secrets.{public_name}.env must be a "
+                    "shell-safe variable name"
                 )
             secrets.append(SecretSpec(public_name=public_name, env_name=env_name))
 
@@ -126,13 +144,18 @@ def _rule_matches(rule: dict[str, str], claims: dict[str, Any]) -> bool:
         actual = claims.get(claim_name)
         if actual is None:
             return False
-        if not fnmatchcase(str(actual), expected):
+        if not isinstance(actual, str):
+            return False
+        if not fnmatchcase(actual, expected):
             return False
     return True
+
+
+def _has_glob(value: str) -> bool:
+    return any(char in value for char in _GLOB_CHARS)
 
 
 def _mapping(value: Any, name: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ConfigurationError(f"{name} must be a mapping")
     return value
-

@@ -7,7 +7,9 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-RUN python -m pip install --no-cache-dir --upgrade pip uv
+RUN groupadd --system --gid 10001 broker \
+    && useradd --system --uid 10001 --gid broker --home-dir /app --no-create-home --shell /usr/sbin/nologin broker \
+    && python -m pip install --no-cache-dir uv==0.8.17
 
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
@@ -20,5 +22,6 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 EXPOSE 8080
 
-CMD ["uvicorn", "github_credential_broker.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+USER broker
 
+CMD ["uvicorn", "github_credential_broker.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]

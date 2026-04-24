@@ -59,6 +59,9 @@ For production, put it behind HTTPS. The endpoint can be public because requests
 are denied unless the GitHub OIDC JWT validates and matches policy, but the
 service should still be treated as sensitive infrastructure.
 
+Generated OpenAPI/Swagger docs are disabled by default. If you need them in a
+non-production environment, set `BROKER_EXPOSE_DOCS=true`.
+
 ## GitHub Actions Caller Example
 
 ```yaml
@@ -110,6 +113,19 @@ jobs:
 ## Policy
 
 See `config/policy.example.yml`.
+
+Policy is intentionally strict:
+
+- Bundle names must match the credential endpoint name format.
+- Secret response names and source environment names must be shell-safe variable
+  names.
+- Wildcards are only accepted in `ref`, `workflow_ref`, and
+  `job_workflow_ref` policy claims. Repository and environment claims must be
+  exact matches.
+
+For high-sensitivity bundles, prefer adding stable GitHub identity claims such
+as `repository_id` and `repository_owner_id` alongside human-readable
+`repository` and `ref` checks.
 
 For reusable workflows, prefer adding `job_workflow_ref` to policy rules once
 the caller repos migrate to `cesaregarza/.github`, for example:

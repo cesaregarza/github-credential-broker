@@ -5,7 +5,7 @@ import re
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import FastAPI, Header, HTTPException, Path, Request, status
+from fastapi import FastAPI, Header, HTTPException, Path, Request, Response, status
 from pydantic import BaseModel, Field
 
 from github_credential_broker.errors import (
@@ -42,16 +42,25 @@ class BrokerState:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.broker = BrokerState(load_settings())
+    app.state.broker = BrokerState(app.state.settings)
     yield
 
 
-def create_app() -> FastAPI:
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or load_settings()
+    docs_url = "/docs" if settings.expose_docs else None
+    redoc_url = "/redoc" if settings.expose_docs else None
+    openapi_url = "/openapi.json" if settings.expose_docs else None
+
     app = FastAPI(
         title="GitHub Credential Broker",
         version="0.1.0",
         lifespan=lifespan,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
     )
+    app.state.settings = settings
 
     @app.get("/healthz", response_model=HealthResponse)
     async def healthz() -> HealthResponse:
@@ -60,6 +69,7 @@ def create_app() -> FastAPI:
     @app.post("/v1/credentials/{bundle_name}", response_model=CredentialsResponse)
     async def credentials(
         request: Request,
+        response: Response,
         bundle_name: Annotated[
             str,
             Path(min_length=1, max_length=80, pattern=_BUNDLE_RE.pattern),
@@ -68,7 +78,10 @@ def create_app() -> FastAPI:
     ) -> CredentialsResponse:
         broker: BrokerState = request.app.state.broker
         try:
-            token = extract_bearer_token(authorization)
+            token = extract_bearer_token(
+                authorization,
+                max_length=broker.settings.max_bearer_token_length,
+            )
             claims = broker.verifier.verify(token)
             bundle = broker.policy.require_bundle(bundle_name)
             authorize_bundle(bundle, claims)
@@ -95,6 +108,8 @@ def create_app() -> FastAPI:
             "Issued credential bundle",
             extra={"bundle": bundle_name, "audit": audit},
         )
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
         return CredentialsResponse(bundle=bundle_name, audit=audit, secrets=secrets)
 
     return app

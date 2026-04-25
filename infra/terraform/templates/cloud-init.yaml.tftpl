@@ -38,21 +38,25 @@ write_files:
 
 runcmd:
   - systemctl enable --now docker
-  - |
-    set -euo pipefail
-    curl -fsSL https://tailscale.com/install.sh --output /tmp/tailscale-install.sh
-    sh /tmp/tailscale-install.sh
-    rm -f /tmp/tailscale-install.sh
-    systemctl enable --now tailscaled
-  - |
-    set -euo pipefail
-    curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key --output /tmp/caddy.gpg.key
-    gpg --dearmor --yes --output /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy.gpg.key
-    curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt --output /etc/apt/sources.list.d/caddy-stable.list
-    apt-get update
-    apt-get install -y caddy
-    install -o root -g root -m 0644 /etc/github-credential-broker/Caddyfile /etc/caddy/Caddyfile
-    rm -f /tmp/caddy.gpg.key
+  - - bash
+    - -lc
+    - |
+      set -euo pipefail
+      curl -fsSL https://tailscale.com/install.sh --output /tmp/tailscale-install.sh
+      sh /tmp/tailscale-install.sh
+      rm -f /tmp/tailscale-install.sh
+      systemctl enable --now tailscaled
+  - - bash
+    - -lc
+    - |
+      set -euo pipefail
+      curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key --output /tmp/caddy.gpg.key
+      gpg --dearmor --yes --output /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy.gpg.key
+      curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt --output /etc/apt/sources.list.d/caddy-stable.list
+      apt-get update
+      apt-get install -y caddy
+      install -o root -g root -m 0644 /etc/github-credential-broker/Caddyfile /etc/caddy/Caddyfile
+      rm -f /tmp/caddy.gpg.key
   - systemctl daemon-reload
   - systemctl enable --now caddy
   - systemctl enable github-credential-broker.service

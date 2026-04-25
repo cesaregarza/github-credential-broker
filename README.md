@@ -83,6 +83,9 @@ docker run --rm -p 8080:8080 \
 For `op:` policy secrets, that env file must include `OP_SERVICE_ACCOUNT_TOKEN`.
 For `env:` policy secrets, it must include the referenced secret variables.
 
+Terraform for the DigitalOcean Droplet, Cloudflare DNS record, firewall, Caddy,
+Tailscale bootstrap, and broker systemd unit lives in `infra/terraform`.
+
 In production, also:
 
 - Put the broker behind a reverse proxy that enforces TLS and a per-IP rate

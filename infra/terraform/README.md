@@ -1,0 +1,136 @@
+# Terraform Deployment
+
+This module provisions the first production host for the broker:
+
+- a DigitalOcean Droplet in `nyc3` using `ubuntu-24-04-x64`
+- a DigitalOcean firewall with only public TCP `80` and `443` open
+- optionally, the exact Cloudflare `A` record for `credentials.splat.top`
+- cloud-init bootstrap for Docker, Caddy, Tailscale, broker policy, and the
+  broker systemd unit
+
+It intentionally does not put the 1Password service account token, Cloudflare
+token, or DigitalOcean token in Terraform variables, cloud-init, or state.
+
+## DNS Boundary
+
+Application subdomains stay with the cluster DNS stack. The broker is isolated
+on its own Droplet for security and should have only one public DNS name:
+`credentials.splat.top`.
+
+By default this module creates that exact `A` record. It never manages wildcard
+records or application subdomains. If the cluster DNS stack owns all Cloudflare
+records, set:
+
+```hcl
+manage_broker_dns = false
+```
+
+Then create the exact broker record in the cluster DNS stack instead:
+
+```text
+credentials.splat.top A <broker droplet IPv4>
+```
+
+## Prerequisites
+
+Set provider credentials in your shell:
+
+```bash
+export DIGITALOCEAN_TOKEN=...
+export CLOUDFLARE_API_TOKEN=...
+```
+
+The DigitalOcean token needs Droplet, firewall, and tag permissions. If
+`manage_broker_dns` is true, the Cloudflare token also needs zone read and DNS
+edit for `splat.top`.
+
+The broker image must be pullable by the Droplet without authentication. The
+GitHub Actions workflow publishes to GHCR; after the first package is created,
+verify it is public or make it public in GitHub Packages.
+
+## Configure
+
+```bash
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars
+editor terraform.tfvars
+```
+
+Set `container_image` to the public GHCR image, for example:
+
+```hcl
+container_image = "ghcr.io/cesaregarza/github-credential-broker:main"
+```
+
+Set `policy_path` to the policy that should be copied to the Droplet at first
+boot. For production, do not use the checked-in example unchanged; use
+`strict: true` and include numeric `repository_id` values in every allow rule.
+
+Do not put secrets in `terraform.tfvars`; local tfvars and Terraform state are
+ignored by Git.
+
+## Apply
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+The output includes the GitHub OIDC audience:
+
+```text
+https://credentials.splat.top/v1
+```
+
+Callers must request exactly that audience from GitHub Actions.
+
+## Manual Bootstrap
+
+The Droplet has no public SSH ingress. Use the DigitalOcean web console for the
+initial bootstrap, then join Tailscale interactively:
+
+```bash
+sudo tailscale up --ssh --hostname github-credential-broker-prod
+```
+
+Create the root-only runtime env file from the generated example:
+
+```bash
+sudo install -o root -g root -m 0600 \
+  /etc/github-credential-broker/broker.env.example \
+  /etc/github-credential-broker/broker.env
+sudo editor /etc/github-credential-broker/broker.env
+```
+
+Set `OP_SERVICE_ACCOUNT_TOKEN` to the dedicated read-only 1Password service
+account token for the broker vault. Then start the service:
+
+```bash
+sudo systemctl start github-credential-broker.service
+sudo systemctl status github-credential-broker.service
+```
+
+Caddy starts during cloud-init and obtains the public TLS certificate. The
+broker service is only enabled during cloud-init; it will not start until
+`/etc/github-credential-broker/broker.env` exists.
+
+## Operations
+
+Restarting the broker pulls the configured image tag again:
+
+```bash
+sudo systemctl restart github-credential-broker.service
+```
+
+Inspect logs without dumping secrets:
+
+```bash
+sudo journalctl -u github-credential-broker.service -n 100 --no-pager
+sudo journalctl -u caddy -n 100 --no-pager
+```
+
+The policy copied at first boot comes from `policy_path`. After Tailscale is
+joined, update `/etc/github-credential-broker/policy.yml` directly for
+policy-only changes or replace the Droplet with Terraform if you want
+cloud-init to replay from the repo.

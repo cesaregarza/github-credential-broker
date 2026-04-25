@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 *.sw?
 .*.sw?
 .venv/
@@ -9,3 +11,17 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

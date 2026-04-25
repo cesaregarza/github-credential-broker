@@ -1,0 +1,19 @@
+container_image = "ghcr.io/OWNER/github-credential-broker:main"
+
+# Point this at the policy that should be copied to the Droplet at first boot.
+# For production, use strict: true and include numeric repository_id values.
+policy_path = "../../config/policy.example.yml"
+
+# Defaults match the intended production deployment:
+# cloudflare_zone_name = "splat.top"
+# broker_hostname      = "credentials.splat.top"
+# region               = "nyc3"
+# droplet_size         = "s-1vcpu-1gb"
+# droplet_image        = "ubuntu-24-04-x64"
+
+# Leave true if this module should create the exact credentials.splat.top A
+# record. Set false if the cluster DNS stack owns Cloudflare DNS records.
+# manage_broker_dns = true
+
+# Keep this false unless Cloudflare proxying and origin SSL mode are configured.
+# cloudflare_proxied = false

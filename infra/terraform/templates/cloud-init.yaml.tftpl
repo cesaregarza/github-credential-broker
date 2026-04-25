@@ -1,0 +1,60 @@
+#cloud-config
+package_update: true
+package_upgrade: false
+
+bootcmd:
+  - mkdir -p /etc/github-credential-broker /etc/caddy
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - debian-archive-keyring
+  - debian-keyring
+  - docker.io
+  - gnupg
+
+write_files:
+  - path: /etc/github-credential-broker/policy.yml
+    owner: root:root
+    permissions: "0644"
+    encoding: b64
+    content: ${policy_yaml_b64}
+  - path: /etc/github-credential-broker/broker.env.example
+    owner: root:root
+    permissions: "0600"
+    encoding: b64
+    content: ${broker_env_example_b64}
+  - path: /etc/github-credential-broker/Caddyfile
+    owner: root:root
+    permissions: "0644"
+    encoding: b64
+    content: ${caddyfile_b64}
+  - path: /etc/systemd/system/github-credential-broker.service
+    owner: root:root
+    permissions: "0644"
+    encoding: b64
+    content: ${systemd_unit_b64}
+
+runcmd:
+  - systemctl enable --now docker
+  - |
+    set -euo pipefail
+    curl -fsSL https://tailscale.com/install.sh --output /tmp/tailscale-install.sh
+    sh /tmp/tailscale-install.sh
+    rm -f /tmp/tailscale-install.sh
+    systemctl enable --now tailscaled
+  - |
+    set -euo pipefail
+    curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key --output /tmp/caddy.gpg.key
+    gpg --dearmor --yes --output /usr/share/keyrings/caddy-stable-archive-keyring.gpg /tmp/caddy.gpg.key
+    curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt --output /etc/apt/sources.list.d/caddy-stable.list
+    apt-get update
+    apt-get install -y caddy
+    install -o root -g root -m 0644 /etc/github-credential-broker/Caddyfile /etc/caddy/Caddyfile
+    rm -f /tmp/caddy.gpg.key
+  - systemctl daemon-reload
+  - systemctl enable --now caddy
+  - systemctl enable github-credential-broker.service
+
+final_message: "github-credential-broker bootstrap complete. Create /etc/github-credential-broker/broker.env and start github-credential-broker.service."

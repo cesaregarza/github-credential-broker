@@ -15,7 +15,7 @@ from github_credential_broker.errors import (
 )
 from github_credential_broker.oidc import GitHubOIDCVerifier, extract_bearer_token
 from github_credential_broker.policy import audit_claims, authorize_bundle, load_policy
-from github_credential_broker.secret_store import EnvSecretStore
+from github_credential_broker.secret_store import SecretStore
 from github_credential_broker.settings import Settings, load_settings
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,11 @@ class BrokerState:
         self.settings = settings
         self.policy = load_policy(settings.policy_path)
         self.verifier = GitHubOIDCVerifier(settings)
-        self.secret_store = EnvSecretStore()
+        self.secret_store = SecretStore(
+            onepassword_cli_path=settings.onepassword_cli_path,
+            onepassword_timeout_seconds=settings.onepassword_read_timeout_seconds,
+            onepassword_cache_seconds=settings.onepassword_cache_seconds,
+        )
 
 
 @asynccontextmanager

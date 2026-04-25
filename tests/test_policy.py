@@ -60,6 +60,31 @@ def test_authorize_supports_globs(tmp_path):
     )
 
 
+def test_load_policy_supports_onepassword_secret_refs(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                secrets:
+                  TOKEN:
+                    op: op://broker-prod/deploy/token
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    policy = load_policy(policy_path)
+    secret = policy.require_bundle("deploy").secrets[0]
+    assert secret.public_name == "TOKEN"
+    assert secret.source == "op"
+    assert secret.value == "op://broker-prod/deploy/token"
+
+
 def test_authorize_denies_missing_claim(tmp_path):
     policy_path = tmp_path / "policy.yml"
     policy_path.write_text(
@@ -226,4 +251,72 @@ def test_invalid_policy_rejects_unsafe_secret_names(tmp_path):
     )
 
     with pytest.raises(ConfigurationError, match="shell-safe variable names"):
+        load_policy(policy_path)
+
+
+def test_invalid_policy_rejects_multiple_secret_sources(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                secrets:
+                  TOKEN:
+                    env: TOKEN
+                    op: op://broker-prod/deploy/token
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="exactly one"):
+        load_policy(policy_path)
+
+
+def test_invalid_policy_rejects_invalid_onepassword_ref(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                secrets:
+                  TOKEN:
+                    op: https://example.com/nope
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="op:// secret reference"):
+        load_policy(policy_path)
+
+
+def test_invalid_policy_rejects_unknown_secret_keys(tmp_path):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            bundles:
+              deploy:
+                allow:
+                  - repository: cesaregarza/SplatTop
+                secrets:
+                  TOKEN:
+                    env: TOKEN
+                    typo: ignored
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="unsupported keys"):
         load_policy(policy_path)

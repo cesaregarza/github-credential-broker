@@ -20,7 +20,8 @@ _GLOB_CHARS = frozenset("*?[")
 @dataclass(frozen=True)
 class SecretSpec:
     public_name: str
-    env_name: str
+    source: str
+    value: str
 
 
 @dataclass(frozen=True)
@@ -116,13 +117,38 @@ def load_policy(path: Path) -> Policy:
                     f"bundles.{bundle_name}.secrets keys must be shell-safe variable names"
                 )
             spec = _mapping(spec_any, f"bundles.{bundle_name}.secrets.{public_name}")
-            env_name = spec.get("env")
-            if not isinstance(env_name, str) or not _SECRET_NAME_RE.fullmatch(env_name):
+            unknown_keys = set(spec) - {"env", "op"}
+            if unknown_keys:
+                keys = ", ".join(sorted(str(key) for key in unknown_keys))
                 raise ConfigurationError(
-                    f"bundles.{bundle_name}.secrets.{public_name}.env must be a "
-                    "shell-safe variable name"
+                    f"bundles.{bundle_name}.secrets.{public_name} has unsupported keys: {keys}"
                 )
-            secrets.append(SecretSpec(public_name=public_name, env_name=env_name))
+            source_keys = {"env", "op"} & spec.keys()
+            if len(source_keys) != 1:
+                raise ConfigurationError(
+                    f"bundles.{bundle_name}.secrets.{public_name} must set exactly one "
+                    "of env or op"
+                )
+
+            if "env" in source_keys:
+                env_name = spec.get("env")
+                if not isinstance(env_name, str) or not _SECRET_NAME_RE.fullmatch(env_name):
+                    raise ConfigurationError(
+                        f"bundles.{bundle_name}.secrets.{public_name}.env must be a "
+                        "shell-safe variable name"
+                    )
+                secrets.append(
+                    SecretSpec(public_name=public_name, source="env", value=env_name)
+                )
+                continue
+
+            op_ref = spec.get("op")
+            if not isinstance(op_ref, str) or not _valid_onepassword_ref(op_ref):
+                raise ConfigurationError(
+                    f"bundles.{bundle_name}.secrets.{public_name}.op must be an "
+                    "op:// secret reference"
+                )
+            secrets.append(SecretSpec(public_name=public_name, source="op", value=op_ref))
 
         bundles[bundle_name] = Bundle(
             name=bundle_name,
@@ -168,6 +194,15 @@ def _rule_matches(rule: dict[str, str], claims: dict[str, Any]) -> bool:
 
 def _has_glob(value: str) -> bool:
     return any(char in value for char in _GLOB_CHARS)
+
+
+def _valid_onepassword_ref(value: str) -> bool:
+    return (
+        value.startswith("op://")
+        and len(value) > len("op://")
+        and len(value) <= 1024
+        and all(char.isprintable() for char in value)
+    )
 
 
 def _mapping(value: Any, name: str) -> dict[str, Any]:

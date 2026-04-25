@@ -24,9 +24,9 @@ bundles:
         environment: SplatTop
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN:
-        env: SPLATTOP_DO_TOKEN
+        op: op://github-credential-broker-prod/splattop-deploy/DIGITALOCEAN_ACCESS_TOKEN
       CONFIG_REPO_TOKEN:
-        env: SPLATTOP_CONFIG_REPO_TOKEN
+        op: op://github-credential-broker-prod/splattop-deploy/CONFIG_REPO_TOKEN
 
   splatvote-deploy:
     description: SplatVote production deploy credentials.
@@ -37,6 +37,6 @@ bundles:
         environment: default
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN:
-        env: SPLATVOTE_DO_TOKEN
+        op: op://github-credential-broker-prod/splatvote-deploy/DIGITALOCEAN_ACCESS_TOKEN
       CONFIG_REPO_TOKEN:
-        env: SPLATVOTE_CONFIG_REPO_TOKEN
+        op: op://github-credential-broker-prod/splatvote-deploy/CONFIG_REPO_TOKEN

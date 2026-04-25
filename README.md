@@ -14,7 +14,8 @@ vault token. They request a GitHub OIDC token and present it to this broker.
 - Validate issuer, audience, signature, and expiry.
 - Authorize against explicit policy claims such as `repository`, `ref`,
   `environment`, `workflow_ref`, and `job_workflow_ref`.
-- Resolve credential values from the broker deployment environment.
+- Resolve credential values from the broker deployment environment or a
+  dedicated 1Password vault.
 - Never log secret values.
 
 ## Request Flow
@@ -38,6 +39,13 @@ The broker is configured via environment variables prefixed with `BROKER_`.
 | `BROKER_GITHUB_OIDC_ISSUER` | no | GitHub's issuer | Override only if you proxy GitHub's OIDC. |
 | `BROKER_GITHUB_OIDC_JWKS_URL` | no | GitHub's JWKS | Override only if you proxy GitHub's OIDC. |
 | `BROKER_EXPOSE_DOCS` | no | `false` | Set `true` to enable `/docs` and `/openapi.json`. Do not enable in production. |
+| `BROKER_ONEPASSWORD_CLI_PATH` | no | `op` | Path to the 1Password CLI used for `op:` policy secrets. |
+| `BROKER_ONEPASSWORD_READ_TIMEOUT_SECONDS` | no | `10` | Per-secret timeout for `op read`. |
+| `BROKER_ONEPASSWORD_CACHE_SECONDS` | no | `60` | In-memory cache TTL for `op:` secret values. Set `0` to disable. |
+
+If any policy secret uses `op:`, the runtime also needs
+`OP_SERVICE_ACCOUNT_TOKEN` set to a 1Password service account token that can
+read only the broker vault.
 
 ## Run Locally
 
@@ -45,29 +53,35 @@ The broker is configured via environment variables prefixed with `BROKER_`.
 uv sync
 export BROKER_POLICY_PATH=config/policy.example.yml
 export BROKER_GITHUB_OIDC_AUDIENCE="https://broker.example.com/v1"
-export SPLATTOP_DO_TOKEN=dummy
-export SPLATTOP_CONFIG_REPO_TOKEN=dummy
+export OP_SERVICE_ACCOUNT_TOKEN=ops_...
 uv run uvicorn github_credential_broker.app:create_app --factory --host 127.0.0.1 --port 8080
 ```
 
-Local calls need a valid GitHub OIDC token, so normal local testing focuses on
-unit tests and policy validation.
+Local credential calls need a valid GitHub OIDC token, so normal local testing
+focuses on unit tests, policy validation, and direct `op://` reference checks.
 
 ## Deploy
 
-Build a container and mount/provide a real policy file plus environment-backed
-secret values:
+Build a container and mount/provide a real policy file. Put runtime
+configuration in a root-only env file such as
+`/etc/github-credential-broker/broker.env`:
+
+```env
+BROKER_POLICY_PATH=/app/config/policy.yml
+BROKER_GITHUB_OIDC_AUDIENCE=https://broker.example.com/v1
+OP_SERVICE_ACCOUNT_TOKEN=ops_...
+```
 
 ```bash
 docker build -t github-credential-broker .
 docker run --rm -p 8080:8080 \
-  -e BROKER_POLICY_PATH=/app/config/policy.yml \
-  -e BROKER_GITHUB_OIDC_AUDIENCE="https://broker.example.com/v1" \
-  -e SPLATTOP_DO_TOKEN=... \
-  -e SPLATTOP_CONFIG_REPO_TOKEN=... \
+  --env-file /etc/github-credential-broker/broker.env \
   -v "$PWD/config/policy.example.yml:/app/config/policy.yml:ro" \
   github-credential-broker
 ```
+
+For `op:` policy secrets, that env file must include `OP_SERVICE_ACCOUNT_TOKEN`.
+For `env:` policy secrets, it must include the referenced secret variables.
 
 In production, also:
 
@@ -83,6 +97,33 @@ service should still be treated as sensitive infrastructure.
 
 Generated OpenAPI/Swagger docs are disabled by default. If you need them in a
 non-production environment, set `BROKER_EXPOSE_DOCS=true`.
+
+## 1Password
+
+For a DigitalOcean Droplet, use a dedicated 1Password vault such as
+`github-credential-broker-prod` and a read-only service account scoped only to
+that vault. Store the service account token on the Droplet as a root-only
+runtime secret, not in GitHub and not in the image.
+
+Policy secrets can reference 1Password fields with `op://` references:
+
+```yaml
+bundles:
+  splattop-deploy:
+    allow:
+      - repository: cesaregarza/SplatTop
+        repository_id: "123456789"
+        ref: refs/heads/main
+        environment: SplatTop
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/splattop-deploy/DIGITALOCEAN_ACCESS_TOKEN
+      CONFIG_REPO_TOKEN:
+        op: op://github-credential-broker-prod/splattop-deploy/CONFIG_REPO_TOKEN
+```
+
+The broker validates GitHub OIDC and policy before resolving these references.
+The 1Password token is never returned to GitHub Actions.
 
 ## GitHub Actions Caller Example
 
@@ -139,8 +180,10 @@ See `config/policy.example.yml`.
 Policy is intentionally strict:
 
 - Bundle names must match the credential endpoint name format.
-- Secret response names and source environment names must be shell-safe variable
+- Secret response names and `env:` source names must be shell-safe variable
   names.
+- Each secret must set exactly one source: `env:` for environment variables or
+  `op:` for a 1Password secret reference.
 - Wildcards are only accepted in `ref`, `workflow_ref`, and
   `job_workflow_ref` policy claims. Repository and environment claims must be
   exact matches.

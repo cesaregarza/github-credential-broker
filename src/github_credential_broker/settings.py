@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     jwks_cache_seconds: int = Field(default=300, ge=60, le=86400)
     max_bundle_name_length: int = Field(default=80, ge=1, le=128)
     max_bearer_token_length: int = Field(default=16384, ge=512, le=65536)
+    onepassword_cli_path: str = "op"
+    onepassword_read_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    onepassword_cache_seconds: int = Field(default=60, ge=0, le=3600)
 
 
 def load_settings() -> Settings:

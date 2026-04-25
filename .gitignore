@@ -1,4 +1,6 @@
 .env
+*.sw?
+.*.sw?
 .venv/
 __pycache__/
 *.py[cod]
@@ -7,4 +9,3 @@ __pycache__/
 dist/
 build/
 *.egg-info/
-

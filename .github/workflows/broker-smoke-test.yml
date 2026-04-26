@@ -17,61 +17,34 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Request GitHub OIDC token
-        id: oidc
-        env:
-          AUDIENCE: https://credentials.garz.ai/v1
-        shell: bash
-        run: |
-          set -euo pipefail
-          token_json="$(
-            curl -sSf \
-              -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}"
-          )"
-          token="$(jq -r .value <<< "$token_json")"
-          echo "::add-mask::$token"
-          echo "token=$token" >> "$GITHUB_OUTPUT"
-
       - name: Fetch smoke-test credential
+        id: broker
+        uses: cesaregarza/.github/actions/fetch-broker-credentials@main
+        with:
+          broker-url: https://credentials.garz.ai
+          audience: https://credentials.garz.ai/v1
+          capability: broker-smoke-test
+
+      - name: Assert smoke-test credential
         env:
-          BROKER_URL: https://credentials.garz.ai
+          AUDIT_JSON: ${{ steps.broker.outputs.audit }}
+          CAPABILITY: ${{ steps.broker.outputs.capability }}
           EXPECTED_TEST_TOKEN: test_value
-          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
           PRINT_VALUE: ${{ inputs.print_value }}
+          SECRETS_JSON: ${{ steps.broker.outputs.secrets-json }}
         shell: bash
         run: |
           set -euo pipefail
-          response="$(
-            jq -nc '{capabilities: ["broker-smoke-test"]}' |
-              curl -sSf -X POST \
-                -H "Authorization: Bearer $OIDC_TOKEN" \
-                -H "Content-Type: application/json" \
-                --data-binary @- \
-                "$BROKER_URL/v1/capabilities"
-          )"
-
-          while IFS= read -r secret_value; do
-            if [[ -n "$secret_value" && "$secret_value" != "null" ]]; then
-              echo "::add-mask::$secret_value"
-            fi
-          done < <(jq -r '.secrets[]' <<< "$response")
-
-          capability="$(jq -r '.capabilities[]' <<< "$response")"
-          value="$(jq -r '.secrets.TEST_TOKEN' <<< "$response")"
-
-          if [[ "$capability" != "broker-smoke-test" ]]; then
-            echo "unexpected capability response: $capability" >&2
-            exit 1
-          fi
+          value="$(jq -r '.TEST_TOKEN' <<< "$SECRETS_JSON")"
+          echo "::add-mask::$value"
 
           if [[ "$value" != "$EXPECTED_TEST_TOKEN" ]]; then
             echo "TEST_TOKEN did not match expected smoke-test value" >&2
             exit 1
           fi
 
-          echo "capability=$capability"
-          echo "audit=$(jq -c '.audit' <<< "$response")"
+          echo "capability=$CAPABILITY"
+          echo "audit=$AUDIT_JSON"
           echo "value_length=${#value}"
           if [[ "$PRINT_VALUE" == "true" ]]; then
             echo "TEST_TOKEN=$value"

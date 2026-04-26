@@ -29,17 +29,21 @@ capabilities:
       CONFIG_REPO_TOKEN:
         op: op://github-credential-broker-prod/config-repo-write/CONFIG_REPO_TOKEN
 
-  digitalocean-spaces-assets:
+  digitalocean-spaces-read:
+    description: Read-only DigitalOcean Spaces credentials.
+    secrets:
+      DIGITALOCEAN_SPACES_KEY:
+        op: op://github-credential-broker-prod/digitalocean-spaces-read/DIGITALOCEAN_SPACES_KEY
+      DIGITALOCEAN_SPACES_SECRET:
+        op: op://github-credential-broker-prod/digitalocean-spaces-read/DIGITALOCEAN_SPACES_SECRET
+
+  digitalocean-spaces-write:
     description: DigitalOcean Spaces credentials for asset and i18n updaters.
     secrets:
-      DO_SPACES_KEY:
-        op: op://github-credential-broker-prod/digitalocean-spaces-assets/DO_SPACES_KEY
-      DO_SPACES_SECRET:
-        op: op://github-credential-broker-prod/digitalocean-spaces-assets/DO_SPACES_SECRET
-      DO_SPACES_REGION:
-        op: op://github-credential-broker-prod/digitalocean-spaces-assets/DO_SPACES_REGION
-      DO_SPACES_ENDPOINT:
-        op: op://github-credential-broker-prod/digitalocean-spaces-assets/DO_SPACES_ENDPOINT
+      DIGITALOCEAN_SPACES_KEY:
+        op: op://github-credential-broker-prod/digitalocean-spaces-write/DIGITALOCEAN_SPACES_KEY
+      DIGITALOCEAN_SPACES_SECRET:
+        op: op://github-credential-broker-prod/digitalocean-spaces-write/DIGITALOCEAN_SPACES_SECRET
 
   broker-smoke-test:
     description: Non-sensitive broker smoke-test credential for this repository only.
@@ -87,7 +91,7 @@ grants:
         environment: SplatTop
         workflow_ref: cesaregarza/SplatTop/.github/workflows/update_i18n.yaml@refs/heads/main
     capabilities:
-      - digitalocean-spaces-assets
+      - digitalocean-spaces-write
 
   - description: SplatVote production deploy workflow.
     allow:

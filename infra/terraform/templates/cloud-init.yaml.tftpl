@@ -58,7 +58,8 @@ runcmd:
       install -o root -g root -m 0644 /etc/github-credential-broker/Caddyfile /etc/caddy/Caddyfile
       rm -f /tmp/caddy.gpg.key
   - systemctl daemon-reload
-  - systemctl enable --now caddy
+  - systemctl enable caddy
+  - systemctl restart caddy
   - systemctl enable github-credential-broker.service
 
 final_message: "github-credential-broker bootstrap complete. Create /etc/github-credential-broker/broker.env and start github-credential-broker.service."

@@ -24,6 +24,12 @@ capabilities:
       DIGITALOCEAN_CLUSTER_ID:
         op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_CLUSTER_ID
 
+  digitalocean-registry-write:
+    description: DigitalOcean token for writing images to DOCR.
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
+
   config-repo-write:
     description: GitHub token for writing deployment config repository updates.
     secrets:
@@ -117,6 +123,17 @@ grants:
     capabilities:
       - digitalocean-k8s-deploy
       - config-repo-write
+
+  - description: SplatTopTeams image publish workflow.
+    allow:
+      - repository: cesaregarza/SplatTopTeams
+        repository_id: "1215338068"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: default
+        workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/verify_and_publish_images.yaml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
 
   - description: Broker repository smoke test workflow.
     allow:

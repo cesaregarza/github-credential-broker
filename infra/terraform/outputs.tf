@@ -28,6 +28,16 @@ output "broker_dns_a_record" {
   value       = "${var.broker_hostname} -> ${digitalocean_droplet.broker.ipv4_address}"
 }
 
+output "break_glass_ssh_enabled" {
+  description = "Whether the public firewall has a restricted TCP 22 break-glass rule."
+  value       = local.break_glass_ssh_enabled
+}
+
+output "break_glass_ssh_user" {
+  description = "SSH username for restricted break-glass access when enabled."
+  value       = local.break_glass_ssh_enabled ? "brokeradmin" : null
+}
+
 output "runtime_env_path" {
   description = "Root-only env file that must be created manually on the Droplet before starting the broker."
   value       = "/etc/github-credential-broker/broker.env"

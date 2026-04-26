@@ -115,6 +115,30 @@ Caddy starts during cloud-init and obtains the public TLS certificate. The
 broker service is only enabled during cloud-init; it will not start until
 `/etc/github-credential-broker/broker.env` exists.
 
+## Break-Glass SSH
+
+The normal bootstrap path is the DigitalOcean console followed by Tailscale SSH.
+If the console is unavailable, you can temporarily inject a DigitalOcean SSH key
+and open TCP `22` only to your current IP:
+
+```hcl
+break_glass_ssh_public_keys = [
+  "ssh-ed25519 AAAA... user@example",
+]
+break_glass_ssh_source_addresses = ["203.0.113.10/32"]
+```
+
+Changing the injected SSH keys replaces the Droplet because cloud-init only
+runs at first boot. After Tailscale SSH is working, remove these values and
+apply again to close public SSH.
+
+When enabled, SSH as `brokeradmin`. The user has passwordless sudo and a locked
+password:
+
+```bash
+ssh brokeradmin@<droplet-ip>
+```
+
 ## Operations
 
 Restarting the broker pulls the configured image tag again:

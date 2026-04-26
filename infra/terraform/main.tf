@@ -1,6 +1,10 @@
 locals {
   broker_oidc_audience = "https://${var.broker_hostname}/v1"
   common_tags          = distinct(concat([var.project_name, "credential-broker"], var.extra_tags))
+  break_glass_ssh_enabled = (
+    length(var.break_glass_ssh_public_keys) > 0
+    && length(var.break_glass_ssh_source_addresses) > 0
+  )
   policy_source_path = (
     startswith(var.policy_path, "/")
     ? var.policy_path
@@ -81,10 +85,11 @@ resource "digitalocean_droplet" "broker" {
   graceful_shutdown = true
   tags              = [for tag in digitalocean_tag.broker : tag.name]
   user_data = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
-    broker_env_example_b64 = base64encode(local.broker_env_example)
-    caddyfile_b64          = base64encode(local.caddyfile)
-    policy_yaml_b64        = filebase64(local.policy_source_path)
-    systemd_unit_b64       = base64encode(local.systemd_unit)
+    break_glass_ssh_public_keys = var.break_glass_ssh_public_keys
+    broker_env_example_b64      = base64encode(local.broker_env_example)
+    caddyfile_b64               = base64encode(local.caddyfile)
+    policy_yaml_b64             = filebase64(local.policy_source_path)
+    systemd_unit_b64            = base64encode(local.systemd_unit)
   })
 }
 
@@ -102,6 +107,16 @@ resource "digitalocean_firewall" "broker" {
     protocol         = "tcp"
     port_range       = "443"
     source_addresses = ["0.0.0.0/0", "::/0"]
+  }
+
+  dynamic "inbound_rule" {
+    for_each = local.break_glass_ssh_enabled ? [1] : []
+
+    content {
+      protocol         = "tcp"
+      port_range       = "22"
+      source_addresses = var.break_glass_ssh_source_addresses
+    }
   }
 
   outbound_rule {

@@ -44,6 +44,18 @@ variable "enable_backups" {
   default     = false
 }
 
+variable "break_glass_ssh_public_keys" {
+  description = "Optional public SSH keys to install into root authorized_keys for break-glass bootstrap access. Leave empty to disable public SSH key login."
+  type        = list(string)
+  default     = []
+}
+
+variable "break_glass_ssh_source_addresses" {
+  description = "CIDR source addresses allowed to reach TCP 22 when break-glass SSH keys are configured."
+  type        = list(string)
+  default     = []
+}
+
 variable "cloudflare_zone_name" {
   description = "Cloudflare DNS zone name."
   type        = string

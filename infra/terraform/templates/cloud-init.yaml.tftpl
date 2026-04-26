@@ -1,6 +1,22 @@
 #cloud-config
 package_update: true
 package_upgrade: false
+disable_root: false
+ssh_pwauth: false
+%{ if length(break_glass_ssh_public_keys) > 0 ~}
+users:
+  - default
+  - name: brokeradmin
+    gecos: Broker Break-Glass Admin
+    groups: sudo
+    shell: /bin/bash
+    lock_passwd: true
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+%{ for key in break_glass_ssh_public_keys ~}
+      - ${key}
+%{ endfor ~}
+%{ endif ~}
 
 bootcmd:
   - mkdir -p /etc/github-credential-broker /etc/caddy

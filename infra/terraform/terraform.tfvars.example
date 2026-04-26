@@ -15,5 +15,10 @@ policy_path = "../../config/policy.example.yml"
 # record. Set false if the cluster DNS stack owns Cloudflare DNS records.
 # manage_broker_dns = true
 
+# Optional break-glass bootstrap access. Prefer leaving this disabled after
+# Tailscale SSH is joined.
+# break_glass_ssh_public_keys      = ["ssh-ed25519 AAAA... user@example"]
+# break_glass_ssh_source_addresses = ["203.0.113.10/32"]
+
 # Keep this false unless Cloudflare proxying and origin SSL mode are configured.
 # cloudflare_proxied = false

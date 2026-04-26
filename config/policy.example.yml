@@ -1,8 +1,9 @@
 version: 1
 
-# Set strict: true to require repository_id in every allow rule. Recommended
-# for production policies — repository names can be transferred, IDs cannot.
-# strict: true
+strict: true
+
+# Strict mode requires repository_id in every allow rule. Repository names can
+# be transferred, but IDs cannot.
 
 defaults:
   audit_claims:

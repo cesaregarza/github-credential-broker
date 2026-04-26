@@ -12,6 +12,7 @@ from github_credential_broker.policy import authorize_capabilities, load_policy
 def test_example_policy_loads():
     policy = load_policy(Path("config/policy.example.yml"))
     capability = policy.require_capability("broker-smoke-test")
+    assert policy.strict is True
     assert capability.secrets[0].public_name == "TEST_TOKEN"
     assert capability.secrets[0].source == "env"
     assert capability.secrets[0].value == "TEST_TOKEN"

@@ -49,6 +49,12 @@ bundles:
         repository_owner_id: "40225001"
         ref: refs/heads/main
         workflow_ref: cesaregarza/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
+      - repository: cesaregarza/github-credential-broker
+        repository_id: "1221081539"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
+        job_workflow_ref: cesaregarza/.github/.github/workflows/broker-smoke-test.yml@refs/heads/main
     secrets:
       TEST_TOKEN:
         env: TEST_TOKEN

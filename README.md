@@ -28,6 +28,35 @@ GitHub Actions job
   -> broker returns only the allowed secret bundle
 ```
 
+## Quick Start
+
+1. Pick a public HTTPS broker URL and OIDC audience for your deployment.
+   Examples below use `https://broker.example.com` and
+   `https://broker.example.com/v1`.
+2. Store real credential values either in the broker host environment or in a
+   dedicated 1Password vault. Do not put vault tokens or cloud tokens in caller
+   repositories.
+3. Add a policy bundle that allows the exact GitHub repository, ref,
+   environment, and workflow that should receive the credentials.
+4. Validate the policy:
+
+   ```bash
+   uv sync
+   uv run github-credential-broker-validate-policy config/policy.example.yml
+   ```
+
+5. Deploy the broker, then configure caller workflows with `id-token: write`
+   and request credentials from `POST /v1/credentials/{bundle}`.
+
+## Current Deployment
+
+The checked-in DigitalOcean/Terraform deployment targets the broker used by
+this repo:
+
+- URL: `https://credentials.garz.ai`
+- GitHub OIDC audience: `https://credentials.garz.ai/v1`
+- Credential endpoint: `POST https://credentials.garz.ai/v1/credentials/{bundle}`
+
 ## Configuration
 
 The broker is configured via environment variables prefixed with `BROKER_`.
@@ -130,6 +159,9 @@ The 1Password token is never returned to GitHub Actions.
 
 ## GitHub Actions Caller Example
 
+The caller workflow must grant `id-token: write`, request the same OIDC
+audience configured on the broker, and call the bundle name allowed in policy.
+
 ```yaml
 permissions:
   contents: read
@@ -157,7 +189,7 @@ jobs:
         id: creds
         shell: bash
         env:
-          BROKER_URL: https://credentials.example.com
+          BROKER_URL: https://broker.example.com
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
         run: |
           set -euo pipefail
@@ -175,6 +207,21 @@ jobs:
             echo "CONFIG_REPO_TOKEN=$config_token"
           } >> "$GITHUB_ENV"
 ```
+
+## Smoke Test
+
+This repo includes a manual `Broker smoke test` workflow. It requests a GitHub
+OIDC token, fetches the `github-credential-broker-smoke-test` bundle, and
+asserts that the non-sensitive `TEST_TOKEN` value is exactly `test_value`.
+
+Use it after changing broker policy or deployment wiring:
+
+```bash
+gh workflow run broker-smoke-test.yml --repo cesaregarza/github-credential-broker
+```
+
+The workflow intentionally prints only the fake `TEST_TOKEN` value. Do not copy
+that pattern for real credentials.
 
 ## Policy
 
@@ -210,10 +257,38 @@ allow:
     job_workflow_ref: cesaregarza/.github/.github/workflows/docker-build-docr.yml@refs/heads/main
 ```
 
+Add new bundles with the narrowest claims that still match the intended
+workflow. A typical production bundle looks like this:
+
+```yaml
+bundles:
+  my-app-deploy:
+    description: Deploy my-app from the main branch.
+    allow:
+      - repository: owner/my-app
+        repository_id: "123456789"
+        repository_owner_id: "987654321"
+        ref: refs/heads/main
+        environment: production
+        workflow_ref: owner/my-app/.github/workflows/deploy.yml@refs/heads/main
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/my-app-deploy/DIGITALOCEAN_ACCESS_TOKEN
+```
+
+Use `env:` instead of `op:` only when the secret is present in the broker
+service env file on the Droplet.
+
 Deploy policy changes over Tailscale SSH without rebuilding the image:
 
 ```bash
 scripts/deploy-policy.sh config/policy.example.yml
+```
+
+If MagicDNS is not available in your shell, pass the Tailscale IP explicitly:
+
+```bash
+scripts/deploy-policy.sh config/policy.example.yml brokeradmin@100.97.170.7
 ```
 
 The script validates the policy locally, uploads it to a temporary path on the

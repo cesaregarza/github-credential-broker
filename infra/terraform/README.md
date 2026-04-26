@@ -156,6 +156,19 @@ sudo journalctl -u caddy -n 100 --no-pager
 ```
 
 The policy copied at first boot comes from `policy_path`. After Tailscale is
-joined, update `/etc/github-credential-broker/policy.yml` directly for
-policy-only changes or replace the Droplet with Terraform if you want
-cloud-init to replay from the repo.
+joined, deploy policy-only changes from the repo root without rebuilding the
+image:
+
+```bash
+scripts/deploy-policy.sh config/policy.example.yml
+```
+
+If MagicDNS is unavailable in your shell, pass the Tailscale IP explicitly:
+
+```bash
+scripts/deploy-policy.sh config/policy.example.yml brokeradmin@100.97.170.7
+```
+
+The script validates the policy locally, validates it again with the running
+broker image on the Droplet, installs it with a timestamped backup, restarts the
+service, and checks `/healthz`.

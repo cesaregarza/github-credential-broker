@@ -14,6 +14,8 @@ locals {
   broker_env_example = <<-EOT
     BROKER_POLICY_PATH=/app/config/policy.yml
     BROKER_GITHUB_OIDC_AUDIENCE=${local.broker_oidc_audience}
+    HOME=/tmp
+    OP_CACHE=false
     OP_SERVICE_ACCOUNT_TOKEN=replace-me
   EOT
 

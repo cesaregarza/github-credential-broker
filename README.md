@@ -76,6 +76,10 @@ If any policy secret uses `op:`, the runtime also needs
 `OP_SERVICE_ACCOUNT_TOKEN` set to a 1Password service account token that can
 read only the broker vault.
 
+The production container is read-only and runs as an unprivileged UID. Set
+`HOME=/tmp` and `OP_CACHE=false` so the 1Password CLI does not try to create
+state under `/home/broker`.
+
 ## Run Locally
 
 ```bash
@@ -98,6 +102,8 @@ configuration in a root-only env file such as
 ```env
 BROKER_POLICY_PATH=/app/config/policy.yml
 BROKER_GITHUB_OIDC_AUDIENCE=https://broker.example.com/v1
+HOME=/tmp
+OP_CACHE=false
 OP_SERVICE_ACCOUNT_TOKEN=ops_...
 ```
 

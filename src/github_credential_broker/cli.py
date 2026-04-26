@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
+from pathlib import Path
 
 import uvicorn
+
+from github_credential_broker.errors import ConfigurationError
+from github_credential_broker.policy import load_policy
 
 
 def main() -> None:
@@ -21,6 +26,18 @@ def main() -> None:
     )
 
 
+def validate_policy_main(argv: Sequence[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Validate a GitHub credential broker policy file.")
+    parser.add_argument("policy_path", type=Path)
+    args = parser.parse_args(argv)
+
+    try:
+        policy = load_policy(args.policy_path)
+    except ConfigurationError as exc:
+        parser.exit(1, f"policy invalid: {exc}\n")
+
+    print(f"policy valid: {args.policy_path} ({len(policy.bundles)} bundles)")
+
+
 if __name__ == "__main__":
     main()
-

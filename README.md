@@ -209,3 +209,14 @@ allow:
     environment: SplatTop
     job_workflow_ref: cesaregarza/.github/.github/workflows/docker-build-docr.yml@refs/heads/main
 ```
+
+Deploy policy changes over Tailscale SSH without rebuilding the image:
+
+```bash
+scripts/deploy-policy.sh config/policy.example.yml
+```
+
+The script validates the policy locally, uploads it to a temporary path on the
+Droplet, validates it again using the running broker image, installs it
+atomically with a timestamped backup, restarts the broker, and checks
+`/healthz`. It assumes SSH access is already available in your shell.

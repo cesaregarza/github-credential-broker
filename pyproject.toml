@@ -23,6 +23,7 @@ dev = [
 
 [project.scripts]
 github-credential-broker = "github_credential_broker.cli:main"
+github-credential-broker-validate-policy = "github_credential_broker.cli:validate_policy_main"
 
 [build-system]
 requires = ["hatchling"]

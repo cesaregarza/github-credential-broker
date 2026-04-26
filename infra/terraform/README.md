@@ -129,8 +129,9 @@ break_glass_ssh_source_addresses = ["203.0.113.10/32"]
 ```
 
 Changing the injected SSH keys replaces the Droplet because cloud-init only
-runs at first boot. After Tailscale SSH is working, remove these values and
-apply again to close public SSH.
+runs at first boot. After Tailscale SSH is working, remove
+`break_glass_ssh_source_addresses` and apply again to close public SSH without
+replacing the Droplet. Remove the public key later during a planned rebuild.
 
 When enabled, SSH as `brokeradmin`. The user has passwordless sudo and a locked
 password:

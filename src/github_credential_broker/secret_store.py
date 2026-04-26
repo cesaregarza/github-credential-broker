@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from github_credential_broker.errors import ConfigurationError
-from github_credential_broker.policy import Bundle
+from github_credential_broker.policy import Capability
 
 
 @dataclass(frozen=True)
@@ -31,21 +31,27 @@ class SecretStore:
         self._runner = runner
         self._op_cache: dict[str, _CachedSecret] = {}
 
-    def resolve_bundle(self, bundle: Bundle) -> dict[str, str]:
+    def resolve_capabilities(self, capabilities: Sequence[Capability]) -> dict[str, str]:
         resolved: dict[str, str] = {}
         missing: list[str] = []
 
-        for spec in bundle.secrets:
-            if spec.source == "env":
-                value = os.environ.get(spec.value)
-                if value is None:
-                    missing.append(spec.value)
-                    continue
-                resolved[spec.public_name] = value
-            elif spec.source == "op":
-                resolved[spec.public_name] = self._read_onepassword_ref(spec.value)
-            else:
-                raise ConfigurationError(f"unsupported secret source: {spec.source}")
+        for capability in capabilities:
+            for spec in capability.secrets:
+                if spec.public_name in resolved:
+                    raise ConfigurationError(
+                        f"duplicate secret response name across requested capabilities: "
+                        f"{spec.public_name}"
+                    )
+                if spec.source == "env":
+                    value = os.environ.get(spec.value)
+                    if value is None:
+                        missing.append(spec.value)
+                        continue
+                    resolved[spec.public_name] = value
+                elif spec.source == "op":
+                    resolved[spec.public_name] = self._read_onepassword_ref(spec.value)
+                else:
+                    raise ConfigurationError(f"unsupported secret source: {spec.source}")
 
         if missing:
             missing_names = ", ".join(sorted(missing))

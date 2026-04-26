@@ -23,9 +23,9 @@ vault token. They request a GitHub OIDC token and present it to this broker.
 ```text
 GitHub Actions job
   -> requests OIDC token for the broker's deployment-specific audience
-  -> POST /v1/credentials/{bundle}
+  -> POST /v1/capabilities with requested capability names
   -> broker validates token and policy
-  -> broker returns only the allowed secret bundle
+  -> broker returns only the requested secrets allowed by matching grants
 ```
 
 ## Quick Start
@@ -36,8 +36,8 @@ GitHub Actions job
 2. Store real credential values either in the broker host environment or in a
    dedicated 1Password vault. Do not put vault tokens or cloud tokens in caller
    repositories.
-3. Add a policy bundle that allows the exact GitHub repository, ref,
-   environment, and workflow that should receive the credentials.
+3. Add reusable policy capabilities for real permissions, then grant those
+   capabilities to exact GitHub repositories, refs, environments, and workflows.
 4. Validate the policy:
 
    ```bash
@@ -46,7 +46,7 @@ GitHub Actions job
    ```
 
 5. Deploy the broker, then configure caller workflows with `id-token: write`
-   and request credentials from `POST /v1/credentials/{bundle}`.
+   and request credentials from `POST /v1/capabilities`.
 
 ## Current Deployment
 
@@ -55,7 +55,7 @@ this repo:
 
 - URL: `https://credentials.garz.ai`
 - GitHub OIDC audience: `https://credentials.garz.ai/v1`
-- Credential endpoint: `POST https://credentials.garz.ai/v1/credentials/{bundle}`
+- Credential endpoint: `POST https://credentials.garz.ai/v1/capabilities`
 
 ## Configuration
 
@@ -126,12 +126,17 @@ In production, also:
 - Put the broker behind a reverse proxy that enforces TLS and a per-IP rate
   limit. The broker has no built-in rate limiting.
 - Ship audit logs to a durable sink. The broker emits an info log per issued
-  bundle with the policy-defined audit claims; if the container is lost or
-  evicted, those records are gone.
+  capability request with the policy-defined audit claims; if the container is
+  lost or evicted, those records are gone.
 
 For production, put it behind HTTPS. The endpoint can be public because requests
 are denied unless the GitHub OIDC JWT validates and matches policy, but the
 service should still be treated as sensitive infrastructure.
+
+During the capability-policy migration, the broker can still load legacy
+`bundles:` policies and serve `POST /v1/credentials/{name}`. Deploy the image
+that supports capabilities first, then deploy the new `capabilities:`/`grants:`
+policy, then migrate caller workflows to `POST /v1/capabilities`.
 
 Generated OpenAPI/Swagger docs are disabled by default. If you need them in a
 non-production environment, set `BROKER_EXPOSE_DOCS=true`.
@@ -143,30 +148,42 @@ For a DigitalOcean Droplet, use a dedicated 1Password vault such as
 that vault. Store the service account token on the Droplet as a root-only
 runtime secret, not in GitHub and not in the image.
 
-Policy secrets can reference 1Password fields with `op://` references:
+Policy capabilities can reference 1Password fields with `op://` references:
 
 ```yaml
-bundles:
-  splattop-deploy:
+capabilities:
+  digitalocean-k8s-deploy:
+    description: DigitalOcean credentials for Kubernetes deployment updates.
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
+      DIGITALOCEAN_CLUSTER_ID:
+        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_CLUSTER_ID
+
+grants:
+  - description: SplatTop deploy workflow.
     allow:
       - repository: cesaregarza/SplatTop
         repository_id: "123456789"
         ref: refs/heads/main
         environment: SplatTop
-    secrets:
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/splattop-deploy/DIGITALOCEAN_ACCESS_TOKEN
-      CONFIG_REPO_TOKEN:
-        op: op://github-credential-broker-prod/splattop-deploy/CONFIG_REPO_TOKEN
+    capabilities:
+      - digitalocean-k8s-deploy
 ```
 
 The broker validates GitHub OIDC and policy before resolving these references.
 The 1Password token is never returned to GitHub Actions.
 
+When migrating from repo-specific policy entries, create or rename the
+1Password items to match the capability paths in policy before deploying it, or
+adjust the `op:` references to point at already-existing items.
+
 ## GitHub Actions Caller Example
 
 The caller workflow must grant `id-token: write`, request the same OIDC
-audience configured on the broker, and call the bundle name allowed in policy.
+audience configured on the broker, and request only capability names allowed by
+matching policy grants. Mask every returned secret value before writing any
+derived output to the log.
 
 ```yaml
 permissions:
@@ -200,14 +217,22 @@ jobs:
         run: |
           set -euo pipefail
           response="$(
-            curl -sSf -X POST \
-              -H "Authorization: Bearer $OIDC_TOKEN" \
-              "$BROKER_URL/v1/credentials/splattop-deploy"
+            jq -nc '{capabilities: ["digitalocean-k8s-deploy", "config-repo-write"]}' |
+              curl -sSf -X POST \
+                -H "Authorization: Bearer $OIDC_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data-binary @- \
+                "$BROKER_URL/v1/capabilities"
           )"
+
+          while IFS= read -r secret_value; do
+            if [[ -n "$secret_value" && "$secret_value" != "null" ]]; then
+              echo "::add-mask::$secret_value"
+            fi
+          done < <(jq -r '.secrets[]' <<< "$response")
+
           do_token="$(jq -r '.secrets.DIGITALOCEAN_ACCESS_TOKEN' <<< "$response")"
           config_token="$(jq -r '.secrets.CONFIG_REPO_TOKEN' <<< "$response")"
-          echo "::add-mask::$do_token"
-          echo "::add-mask::$config_token"
           {
             echo "DIGITALOCEAN_ACCESS_TOKEN=$do_token"
             echo "CONFIG_REPO_TOKEN=$config_token"
@@ -217,8 +242,9 @@ jobs:
 ## Smoke Test
 
 This repo includes a manual `Broker smoke test` workflow. It requests a GitHub
-OIDC token, fetches the `github-credential-broker-smoke-test` bundle, and
-asserts that the non-sensitive `TEST_TOKEN` value is exactly `test_value`.
+OIDC token, fetches the `broker-smoke-test` capability, masks the returned
+value, and asserts that the non-sensitive `TEST_TOKEN` value is exactly
+`test_value`.
 
 Use it after changing broker policy or deployment wiring:
 
@@ -226,8 +252,9 @@ Use it after changing broker policy or deployment wiring:
 gh workflow run broker-smoke-test.yml --repo cesaregarza/github-credential-broker
 ```
 
-The workflow intentionally prints only the fake `TEST_TOKEN` value. Do not copy
-that pattern for real credentials.
+If printing is enabled, GitHub Actions should redact the fake `TEST_TOKEN`
+value because the workflow masks every returned secret value first. Do not copy
+the print pattern for real credentials.
 
 ## Policy
 
@@ -235,16 +262,16 @@ See `config/policy.example.yml`.
 
 Policy is intentionally strict:
 
-- Bundle names must match the credential endpoint name format.
+- Capability names must match the credential request name format.
 - Secret response names and `env:` source names must be shell-safe variable
   names.
 - Each secret must set exactly one source: `env:` for environment variables or
   `op:` for a 1Password secret reference.
 - Wildcards are only accepted in `ref`, `workflow_ref`, and
-  `job_workflow_ref` policy claims. Repository and environment claims must be
+  `job_workflow_ref` grant claims. Repository and environment claims must be
   exact matches.
 
-For high-sensitivity bundles, prefer adding stable GitHub identity claims such
+For high-sensitivity grants, prefer adding stable GitHub identity claims such
 as `repository_id` and `repository_owner_id` alongside human-readable
 `repository` and `ref` checks. Repository names and org names can be transferred
 or renamed; numeric IDs cannot.
@@ -256,20 +283,30 @@ For reusable workflows, prefer adding `job_workflow_ref` to policy rules once
 the caller repos migrate to `cesaregarza/.github`, for example:
 
 ```yaml
-allow:
-  - repository: cesaregarza/SplatTop
-    ref: refs/heads/main
-    environment: SplatTop
-    job_workflow_ref: cesaregarza/.github/.github/workflows/docker-build-docr.yml@refs/heads/main
+grants:
+  - allow:
+      - repository: cesaregarza/SplatTop
+        ref: refs/heads/main
+        environment: SplatTop
+        job_workflow_ref: cesaregarza/.github/.github/workflows/docker-build-docr.yml@refs/heads/main
+    capabilities:
+      - digitalocean-k8s-deploy
 ```
 
-Add new bundles with the narrowest claims that still match the intended
-workflow. A typical production bundle looks like this:
+Add new capabilities for reusable permission boundaries, then add grants with
+the narrowest claims that still match the intended workflow. A typical
+production policy entry looks like this:
 
 ```yaml
-bundles:
-  my-app-deploy:
-    description: Deploy my-app from the main branch.
+capabilities:
+  digitalocean-k8s-deploy:
+    description: DigitalOcean credentials for Kubernetes deployment updates.
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
+
+grants:
+  - description: my-app deploy workflow.
     allow:
       - repository: owner/my-app
         repository_id: "123456789"
@@ -277,9 +314,8 @@ bundles:
         ref: refs/heads/main
         environment: production
         workflow_ref: owner/my-app/.github/workflows/deploy.yml@refs/heads/main
-    secrets:
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/my-app-deploy/DIGITALOCEAN_ACCESS_TOKEN
+    capabilities:
+      - digitalocean-k8s-deploy
 ```
 
 Use `env:` instead of `op:` only when the secret is present in the broker

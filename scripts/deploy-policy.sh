@@ -62,7 +62,10 @@ import sys
 from github_credential_broker.policy import load_policy
 
 policy = load_policy(Path(sys.argv[1]))
-print(f"policy valid: {sys.argv[1]} ({len(policy.bundles)} bundles)")
+print(
+    f"policy valid: {sys.argv[1]} "
+    f"({len(policy.capabilities)} capabilities, {len(policy.grants)} grants)"
+)
 PY
 fi
 
@@ -101,7 +104,7 @@ sudo docker run --rm \
   --entrypoint python \
   -v "$candidate:/tmp/policy.yml:ro" \
   "$image" \
-  -c 'from pathlib import Path; from github_credential_broker.policy import load_policy; p = load_policy(Path("/tmp/policy.yml")); print(f"policy valid: /tmp/policy.yml ({len(p.bundles)} bundles)")'
+  -c 'from pathlib import Path; from github_credential_broker.policy import load_policy; p = load_policy(Path("/tmp/policy.yml")); print(f"policy valid: /tmp/policy.yml ({len(p.capabilities)} capabilities, {len(p.grants)} grants)")'
 
 backup=""
 if sudo test -f "$remote_policy_path"; then

@@ -36,7 +36,10 @@ def validate_policy_main(argv: Sequence[str] | None = None) -> None:
     except ConfigurationError as exc:
         parser.exit(1, f"policy invalid: {exc}\n")
 
-    print(f"policy valid: {args.policy_path} ({len(policy.bundles)} bundles)")
+    print(
+        f"policy valid: {args.policy_path} "
+        f"({len(policy.capabilities)} capabilities, {len(policy.grants)} grants)"
+    )
 
 
 if __name__ == "__main__":

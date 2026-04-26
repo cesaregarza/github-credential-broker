@@ -15,9 +15,64 @@ permissions:
 
 jobs:
   smoke:
-    uses: cesaregarza/.github/.github/workflows/broker-smoke-test.yml@main
-    permissions:
-      contents: read
-      id-token: write
-    with:
-      print_value: ${{ inputs.print_value }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request GitHub OIDC token
+        id: oidc
+        env:
+          AUDIENCE: https://credentials.garz.ai/v1
+        shell: bash
+        run: |
+          set -euo pipefail
+          token_json="$(
+            curl -sSf \
+              -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}"
+          )"
+          token="$(jq -r .value <<< "$token_json")"
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch smoke-test credential
+        env:
+          BROKER_URL: https://credentials.garz.ai
+          EXPECTED_TEST_TOKEN: test_value
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          PRINT_VALUE: ${{ inputs.print_value }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(
+            jq -nc '{capabilities: ["broker-smoke-test"]}' |
+              curl -sSf -X POST \
+                -H "Authorization: Bearer $OIDC_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data-binary @- \
+                "$BROKER_URL/v1/capabilities"
+          )"
+
+          while IFS= read -r secret_value; do
+            if [[ -n "$secret_value" && "$secret_value" != "null" ]]; then
+              echo "::add-mask::$secret_value"
+            fi
+          done < <(jq -r '.secrets[]' <<< "$response")
+
+          capability="$(jq -r '.capabilities[]' <<< "$response")"
+          value="$(jq -r '.secrets.TEST_TOKEN' <<< "$response")"
+
+          if [[ "$capability" != "broker-smoke-test" ]]; then
+            echo "unexpected capability response: $capability" >&2
+            exit 1
+          fi
+
+          if [[ "$value" != "$EXPECTED_TEST_TOKEN" ]]; then
+            echo "TEST_TOKEN did not match expected smoke-test value" >&2
+            exit 1
+          fi
+
+          echo "capability=$capability"
+          echo "audit=$(jq -c '.audit' <<< "$response")"
+          echo "value_length=${#value}"
+          if [[ "$PRINT_VALUE" == "true" ]]; then
+            echo "TEST_TOKEN=$value"
+          fi

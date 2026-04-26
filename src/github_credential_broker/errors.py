@@ -10,9 +10,8 @@ class AuthenticationError(BrokerError):
 
 
 class AuthorizationError(BrokerError):
-    """Authenticated identity is not allowed to access the requested bundle."""
+    """Authenticated identity is not allowed to access requested credentials."""
 
 
 class ConfigurationError(BrokerError):
     """Broker policy or environment is invalid."""
-

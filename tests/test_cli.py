@@ -13,14 +13,16 @@ def test_validate_policy_main_accepts_valid_policy(tmp_path, capsys):
         textwrap.dedent(
             """
             version: 1
-            bundles:
+            capabilities:
               deploy:
-                allow:
-                  - repository: cesaregarza/SplatTop
-                    repository_id: "12345"
                 secrets:
                   TOKEN:
                     env: TOKEN
+            grants:
+              - allow:
+                  - repository: cesaregarza/SplatTop
+                    repository_id: "12345"
+                capabilities: [deploy]
             """
         ),
         encoding="utf-8",
@@ -30,6 +32,7 @@ def test_validate_policy_main_accepts_valid_policy(tmp_path, capsys):
 
     captured = capsys.readouterr()
     assert "policy valid" in captured.out
+    assert "(1 capabilities, 1 grants)" in captured.out
 
 
 def test_validate_policy_main_rejects_invalid_policy(tmp_path, capsys):

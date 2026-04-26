@@ -14,22 +14,82 @@ defaults:
     - run_id
     - run_attempt
 
-bundles:
-  splattop-deploy:
-    description: SplatTop production deploy credentials.
-    allow:
-      - repository: cesaregarza/SplatTop
-        # Add repository_id and repository_owner_id for production policies.
-        ref: refs/heads/main
-        environment: SplatTop
+capabilities:
+  digitalocean-k8s-deploy:
+    description: DigitalOcean credentials for Kubernetes deployment updates.
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/splattop-deploy/DIGITALOCEAN_ACCESS_TOKEN
-      CONFIG_REPO_TOKEN:
-        op: op://github-credential-broker-prod/splattop-deploy/CONFIG_REPO_TOKEN
+        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
+      DIGITALOCEAN_CLUSTER_ID:
+        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_CLUSTER_ID
 
-  splatvote-deploy:
-    description: SplatVote production deploy credentials.
+  config-repo-write:
+    description: GitHub token for writing deployment config repository updates.
+    secrets:
+      CONFIG_REPO_TOKEN:
+        op: op://github-credential-broker-prod/config-repo-write/CONFIG_REPO_TOKEN
+
+  digitalocean-spaces-assets:
+    description: DigitalOcean Spaces credentials for asset and i18n updaters.
+    secrets:
+      DO_SPACES_KEY:
+        op: op://github-credential-broker-prod/digitalocean-spaces-assets/DO_SPACES_KEY
+      DO_SPACES_SECRET:
+        op: op://github-credential-broker-prod/digitalocean-spaces-assets/DO_SPACES_SECRET
+      DO_SPACES_REGION:
+        op: op://github-credential-broker-prod/digitalocean-spaces-assets/DO_SPACES_REGION
+      DO_SPACES_ENDPOINT:
+        op: op://github-credential-broker-prod/digitalocean-spaces-assets/DO_SPACES_ENDPOINT
+
+  broker-smoke-test:
+    description: Non-sensitive broker smoke-test credential for this repository only.
+    secrets:
+      TEST_TOKEN:
+        env: TEST_TOKEN
+
+grants:
+  - description: SplatTop production deploy workflows.
+    allow:
+      - repository: cesaregarza/SplatTop
+        repository_id: "679054126"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: SplatTop
+        workflow_ref: cesaregarza/SplatTop/.github/workflows/update_k8s_deployment.yaml@refs/heads/main
+      - repository: cesaregarza/SplatTop
+        repository_id: "679054126"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: SplatTop
+        workflow_ref: cesaregarza/SplatTop/.github/workflows/monitoring-snapshots.yml@refs/heads/main
+      - repository: cesaregarza/SplatTop
+        repository_id: "679054126"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: SplatTop
+        workflow_ref: cesaregarza/SplatTop/.github/workflows/sync_competition_admins_to_config.yml@refs/heads/main
+    capabilities:
+      - digitalocean-k8s-deploy
+      - config-repo-write
+
+  - description: SplatTop asset updater workflows.
+    allow:
+      - repository: cesaregarza/SplatTop
+        repository_id: "679054126"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: SplatTop
+        workflow_ref: cesaregarza/SplatTop/.github/workflows/update_assets.yml@refs/heads/main
+      - repository: cesaregarza/SplatTop
+        repository_id: "679054126"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: SplatTop
+        workflow_ref: cesaregarza/SplatTop/.github/workflows/update_i18n.yaml@refs/heads/main
+    capabilities:
+      - digitalocean-spaces-assets
+
+  - description: SplatVote production deploy workflow.
     allow:
       - repository: cesaregarza/SplatVote
         repository_id: "1126936164"
@@ -37,14 +97,11 @@ bundles:
         ref: refs/heads/main
         environment: default
         workflow_ref: cesaregarza/SplatVote/.github/workflows/update_splatvote_config.yaml@refs/heads/main
-    secrets:
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/splatvote-deploy/DIGITALOCEAN_ACCESS_TOKEN
-      CONFIG_REPO_TOKEN:
-        op: op://github-credential-broker-prod/splatvote-deploy/CONFIG_REPO_TOKEN
+    capabilities:
+      - digitalocean-k8s-deploy
+      - config-repo-write
 
-  splattop-blog-deploy:
-    description: SplatTopBlog production deploy credentials.
+  - description: SplatTopBlog production deploy workflow.
     allow:
       - repository: cesaregarza/SplatTopBlog
         repository_id: "1134030800"
@@ -52,26 +109,16 @@ bundles:
         ref: refs/heads/main
         environment: SplatTop
         workflow_ref: cesaregarza/SplatTopBlog/.github/workflows/deploy.yml@refs/heads/main
-    secrets:
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/splattop-blog-deploy/DIGITALOCEAN_ACCESS_TOKEN
-      CONFIG_REPO_TOKEN:
-        op: op://github-credential-broker-prod/splattop-blog-deploy/CONFIG_REPO_TOKEN
+    capabilities:
+      - digitalocean-k8s-deploy
+      - config-repo-write
 
-  github-credential-broker-smoke-test:
-    description: Non-sensitive broker smoke-test credential for this repository only.
+  - description: Broker repository smoke test workflow.
     allow:
       - repository: cesaregarza/github-credential-broker
         repository_id: "1221081539"
         repository_owner_id: "40225001"
         ref: refs/heads/main
         workflow_ref: cesaregarza/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
-      - repository: cesaregarza/github-credential-broker
-        repository_id: "1221081539"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        workflow_ref: cesaregarza/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
-        job_workflow_ref: cesaregarza/.github/.github/workflows/broker-smoke-test.yml@refs/heads/main
-    secrets:
-      TEST_TOKEN:
-        env: TEST_TOKEN
+    capabilities:
+      - broker-smoke-test

@@ -43,6 +43,21 @@ bundles:
       CONFIG_REPO_TOKEN:
         op: op://github-credential-broker-prod/splatvote-deploy/CONFIG_REPO_TOKEN
 
+  splattop-blog-deploy:
+    description: SplatTopBlog production deploy credentials.
+    allow:
+      - repository: cesaregarza/SplatTopBlog
+        repository_id: "1134030800"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: SplatTop
+        workflow_ref: cesaregarza/SplatTopBlog/.github/workflows/deploy.yml@refs/heads/main
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/splattop-blog-deploy/DIGITALOCEAN_ACCESS_TOKEN
+      CONFIG_REPO_TOKEN:
+        op: op://github-credential-broker-prod/splattop-blog-deploy/CONFIG_REPO_TOKEN
+
   github-credential-broker-smoke-test:
     description: Non-sensitive broker smoke-test credential for this repository only.
     allow:

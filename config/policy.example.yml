@@ -135,6 +135,17 @@ grants:
     capabilities:
       - digitalocean-registry-write
 
+  - description: SplatTopConfig image bump workflow.
+    allow:
+      - repository: cesaregarza/SplatTopConfig
+        repository_id: "1094738678"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: config
+        workflow_ref: cesaregarza/SplatTopConfig/.github/workflows/bump-image.yml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+
   - description: Broker repository smoke test workflow.
     allow:
       - repository: cesaregarza/github-credential-broker

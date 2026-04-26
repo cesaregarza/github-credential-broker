@@ -32,9 +32,11 @@ bundles:
     description: SplatVote production deploy credentials.
     allow:
       - repository: cesaregarza/SplatVote
-        # Add repository_id and repository_owner_id for production policies.
+        repository_id: "1126936164"
+        repository_owner_id: "40225001"
         ref: refs/heads/main
         environment: default
+        workflow_ref: cesaregarza/SplatVote/.github/workflows/update_splatvote_config.yaml@refs/heads/main
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN:
         op: op://github-credential-broker-prod/splatvote-deploy/DIGITALOCEAN_ACCESS_TOKEN

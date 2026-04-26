@@ -4,7 +4,7 @@ This module provisions the first production host for the broker:
 
 - a DigitalOcean Droplet in `nyc3` using `ubuntu-24-04-x64`
 - a DigitalOcean firewall with only public TCP `80` and `443` open
-- optionally, the exact Cloudflare `A` record for `credentials.splat.top`
+- optionally, the exact Cloudflare `A` record for `credentials.garz.ai`
 - cloud-init bootstrap for Docker, Caddy, Tailscale, broker policy, and the
   broker systemd unit
 
@@ -15,7 +15,7 @@ token, or DigitalOcean token in Terraform variables, cloud-init, or state.
 
 Application subdomains stay with the cluster DNS stack. The broker is isolated
 on its own Droplet for security and should have only one public DNS name:
-`credentials.splat.top`.
+`credentials.garz.ai`.
 
 By default this module creates that exact `A` record. It never manages wildcard
 records or application subdomains. If the cluster DNS stack owns all Cloudflare
@@ -28,7 +28,7 @@ manage_broker_dns = false
 Then create the exact broker record in the cluster DNS stack instead:
 
 ```text
-credentials.splat.top A <broker droplet IPv4>
+credentials.garz.ai A <broker droplet IPv4>
 ```
 
 ## Prerequisites
@@ -42,7 +42,7 @@ export CLOUDFLARE_API_TOKEN=...
 
 The DigitalOcean token needs Droplet, firewall, and tag permissions. If
 `manage_broker_dns` is true, the Cloudflare token also needs zone read and DNS
-edit for `splat.top`.
+edit for `garz.ai`.
 
 The broker image must be pullable by the Droplet without authentication. The
 GitHub Actions workflow publishes to GHCR; after the first package is created,
@@ -80,7 +80,7 @@ terraform apply
 The output includes the GitHub OIDC audience:
 
 ```text
-https://credentials.splat.top/v1
+https://credentials.garz.ai/v1
 ```
 
 Callers must request exactly that audience from GitHub Actions.

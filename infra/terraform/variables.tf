@@ -59,7 +59,7 @@ variable "break_glass_ssh_source_addresses" {
 variable "cloudflare_zone_name" {
   description = "Cloudflare DNS zone name."
   type        = string
-  default     = "splat.top"
+  default     = "garz.ai"
 }
 
 variable "manage_broker_dns" {
@@ -71,7 +71,7 @@ variable "manage_broker_dns" {
 variable "broker_hostname" {
   description = "Public hostname for the isolated broker Droplet. This module never manages wildcard or application subdomain records."
   type        = string
-  default     = "credentials.splat.top"
+  default     = "credentials.garz.ai"
 }
 
 variable "cloudflare_proxied" {

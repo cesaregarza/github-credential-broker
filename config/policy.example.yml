@@ -50,5 +50,5 @@ bundles:
         ref: refs/heads/main
         workflow_ref: cesaregarza/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
     secrets:
-      BROKER_SMOKE_TEST_VALUE:
-        op: op://github-credential-broker-prod/test-credentials/DIGITALOCEAN_ACCESS_TOKEN
+      TEST_TOKEN:
+        env: TEST_TOKEN

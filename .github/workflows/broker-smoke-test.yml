@@ -42,6 +42,7 @@ jobs:
           BROKER_URL: https://credentials.garz.ai
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
           PRINT_VALUE: ${{ inputs.print_value }}
+          EXPECTED_TEST_TOKEN: test_value
         run: |
           set -euo pipefail
           response="$(
@@ -49,13 +50,18 @@ jobs:
               -H "Authorization: Bearer $OIDC_TOKEN" \
               "$BROKER_URL/v1/credentials/github-credential-broker-smoke-test"
           )"
-          value="$(jq -r '.secrets.BROKER_SMOKE_TEST_VALUE' <<< "$response")"
+          value="$(jq -r '.secrets.TEST_TOKEN' <<< "$response")"
           audit="$(jq -c '.audit' <<< "$response")"
 
           echo "bundle=$(jq -r '.bundle' <<< "$response")"
           echo "audit=$audit"
           echo "value_length=${#value}"
 
+          if [[ "$value" != "$EXPECTED_TEST_TOKEN" ]]; then
+            echo "TEST_TOKEN did not match expected smoke-test value" >&2
+            exit 1
+          fi
+
           if [[ "$PRINT_VALUE" == "true" ]]; then
-            echo "BROKER_SMOKE_TEST_VALUE=$value"
+            echo "TEST_TOKEN=$value"
           fi

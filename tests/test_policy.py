@@ -11,7 +11,10 @@ from github_credential_broker.policy import authorize_bundle, load_policy
 
 def test_example_policy_loads():
     policy = load_policy(Path("config/policy.example.yml"))
-    assert "github-credential-broker-smoke-test" in policy.bundles
+    bundle = policy.require_bundle("github-credential-broker-smoke-test")
+    assert bundle.secrets[0].public_name == "TEST_TOKEN"
+    assert bundle.secrets[0].source == "env"
+    assert bundle.secrets[0].value == "TEST_TOKEN"
 
 
 def test_load_policy_and_authorize_exact_claims(tmp_path):

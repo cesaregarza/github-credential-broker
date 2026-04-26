@@ -40,3 +40,15 @@ bundles:
         op: op://github-credential-broker-prod/splatvote-deploy/DIGITALOCEAN_ACCESS_TOKEN
       CONFIG_REPO_TOKEN:
         op: op://github-credential-broker-prod/splatvote-deploy/CONFIG_REPO_TOKEN
+
+  github-credential-broker-smoke-test:
+    description: Non-sensitive broker smoke-test credential for this repository only.
+    allow:
+      - repository: cesaregarza/github-credential-broker
+        repository_id: "1221081539"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
+    secrets:
+      BROKER_SMOKE_TEST_VALUE:
+        op: op://github-credential-broker-prod/test-credentials/DIGITALOCEAN_ACCESS_TOKEN

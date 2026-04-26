@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import textwrap
+from pathlib import Path
 
 import pytest
 
 from github_credential_broker.errors import AuthorizationError, ConfigurationError
 from github_credential_broker.policy import authorize_bundle, load_policy
+
+
+def test_example_policy_loads():
+    policy = load_policy(Path("config/policy.example.yml"))
+    assert "github-credential-broker-smoke-test" in policy.bundles
 
 
 def test_load_policy_and_authorize_exact_claims(tmp_path):

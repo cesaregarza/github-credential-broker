@@ -1,0 +1,61 @@
+name: Broker smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      print_value:
+        description: Print the returned fake test value to the workflow log.
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  smoke:
+    name: Request fake broker credential
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Request GitHub OIDC token
+        id: oidc
+        shell: bash
+        env:
+          AUDIENCE: https://credentials.garz.ai/v1
+        run: |
+          set -euo pipefail
+          token_json="$(
+            curl -sSf \
+              -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}"
+          )"
+          token="$(jq -r .value <<< "$token_json")"
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch fake smoke-test credential
+        id: broker
+        shell: bash
+        env:
+          BROKER_URL: https://credentials.garz.ai
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          PRINT_VALUE: ${{ inputs.print_value }}
+        run: |
+          set -euo pipefail
+          response="$(
+            curl -sSf -X POST \
+              -H "Authorization: Bearer $OIDC_TOKEN" \
+              "$BROKER_URL/v1/credentials/github-credential-broker-smoke-test"
+          )"
+          value="$(jq -r '.secrets.BROKER_SMOKE_TEST_VALUE' <<< "$response")"
+          audit="$(jq -c '.audit' <<< "$response")"
+
+          echo "bundle=$(jq -r '.bundle' <<< "$response")"
+          echo "audit=$audit"
+          echo "value_length=${#value}"
+
+          if [[ "$PRINT_VALUE" == "true" ]]; then
+            echo "BROKER_SMOKE_TEST_VALUE=$value"
+          fi

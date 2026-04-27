@@ -42,7 +42,7 @@ GitHub Actions job
 
    ```bash
    uv sync
-   uv run github-credential-broker-validate-policy config/policy.example.yml
+   uv run github-credential-broker-validate-policy config/policy.yml
    ```
 
 5. Deploy the broker, then configure caller workflows with `id-token: write`
@@ -67,7 +67,13 @@ The broker is configured via environment variables prefixed with `BROKER_`.
 | `BROKER_GITHUB_OIDC_AUDIENCE` | **yes** | — | Audience callers must request. **Pick a unique value per deployment** (e.g. `https://broker.example.com/v1`). A unique audience prevents both cross-broker token replay and trivial attacks where a third-party workflow mints a token for a guessable audience. |
 | `BROKER_GITHUB_OIDC_ISSUER` | no | GitHub's issuer | Override only if you proxy GitHub's OIDC. |
 | `BROKER_GITHUB_OIDC_JWKS_URL` | no | GitHub's JWKS | Override only if you proxy GitHub's OIDC. |
+| `BROKER_REQUIRE_JTI` | no | `true` | Require GitHub OIDC `jti` and redeem each token ID only once per process until JWT expiry. |
 | `BROKER_EXPOSE_DOCS` | no | `false` | Set `true` to enable `/docs` and `/openapi.json`. Do not enable in production. |
+| `BROKER_ENABLE_LEGACY_CREDENTIALS` | no | `false` | Temporarily enables legacy `POST /v1/credentials/{name}` for bundle migration. |
+| `BROKER_RATE_LIMIT_ENABLED` | no | `true` | Enables in-process IP and verified-identity rate limits. |
+| `BROKER_RATE_LIMIT_IP_PER_MINUTE` | no | `60` | Pre-authentication requests allowed per derived client IP per minute. |
+| `BROKER_RATE_LIMIT_IDENTITY_PER_MINUTE` | no | `30` | Post-authentication requests allowed per `repository_id`, `repository`, or `sub` per minute. |
+| `BROKER_TRUSTED_PROXY_CIDRS` | no | empty | Comma-separated proxy CIDRs trusted for `X-Forwarded-For`; loopback peers are always trusted. |
 | `BROKER_ONEPASSWORD_CLI_PATH` | no | `op` | Path to the 1Password CLI used for `op:` policy secrets. |
 | `BROKER_ONEPASSWORD_READ_TIMEOUT_SECONDS` | no | `10` | Per-secret timeout for `op read`. |
 | `BROKER_ONEPASSWORD_CACHE_SECONDS` | no | `60` | In-memory cache TTL for `op:` secret values. Set `0` to disable. |
@@ -111,7 +117,7 @@ OP_SERVICE_ACCOUNT_TOKEN=ops_...
 docker build -t github-credential-broker .
 docker run --rm -p 8080:8080 \
   --env-file /etc/github-credential-broker/broker.env \
-  -v "$PWD/config/policy.example.yml:/app/config/policy.yml:ro" \
+  -v "$PWD/config/policy.yml:/app/config/policy.yml:ro" \
   github-credential-broker
 ```
 
@@ -123,20 +129,23 @@ Tailscale bootstrap, and broker systemd unit lives in `infra/terraform`.
 
 In production, also:
 
-- Put the broker behind a reverse proxy that enforces TLS and a per-IP rate
-  limit. The broker has no built-in rate limiting.
-- Ship audit logs to a durable sink. The broker emits an info log per issued
-  capability request with the policy-defined audit claims; if the container is
-  lost or evicted, those records are gone.
+- Put the broker behind a reverse proxy that enforces TLS. The broker also has
+  basic in-process rate limiting for this single-host deployment; keep edge
+  limits in the reverse proxy if the service is exposed publicly.
+- Ship audit logs to a durable sink. The broker emits compact JSON audit logs
+  for issued credentials and denied authentication, authorization, replay, and
+  rate-limit attempts; if the container is lost or evicted, local records are
+  gone.
 
 For production, put it behind HTTPS. The endpoint can be public because requests
 are denied unless the GitHub OIDC JWT validates and matches policy, but the
 service should still be treated as sensitive infrastructure.
 
 During the capability-policy migration, the broker can still load legacy
-`bundles:` policies and serve `POST /v1/credentials/{name}`. Deploy the image
-that supports capabilities first, then deploy the new `capabilities:`/`grants:`
-policy, then migrate caller workflows to `POST /v1/capabilities`.
+`bundles:` policies, but `POST /v1/credentials/{name}` is disabled by default.
+Set `BROKER_ENABLE_LEGACY_CREDENTIALS=true` only while actively migrating a
+legacy caller, then migrate workflows to `POST /v1/capabilities` and turn the
+legacy route back off.
 
 Generated OpenAPI/Swagger docs are disabled by default. If you need them in a
 non-production environment, set `BROKER_EXPOSE_DOCS=true`.
@@ -157,8 +166,8 @@ capabilities:
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN:
         op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
-      DIGITALOCEAN_CLUSTER_ID:
-        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_CLUSTER_ID
+      DIGITALOCEAN_KUBERNETES_CLUSTER_ID:
+        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_KUBERNETES_CLUSTER_ID
 
 grants:
   - description: SplatTop deploy workflow.
@@ -232,10 +241,10 @@ jobs:
           done < <(jq -r '.secrets[]' <<< "$response")
 
           do_token="$(jq -r '.secrets.DIGITALOCEAN_ACCESS_TOKEN' <<< "$response")"
-          config_token="$(jq -r '.secrets.CONFIG_REPO_TOKEN' <<< "$response")"
+          config_token="$(jq -r '.secrets.SPLATTOP_CONFIG_GITHUB_TOKEN' <<< "$response")"
           {
             echo "DIGITALOCEAN_ACCESS_TOKEN=$do_token"
-            echo "CONFIG_REPO_TOKEN=$config_token"
+            echo "SPLATTOP_CONFIG_GITHUB_TOKEN=$config_token"
           } >> "$GITHUB_ENV"
 ```
 
@@ -258,7 +267,8 @@ the print pattern for real credentials.
 
 ## Policy
 
-See `config/policy.example.yml`.
+The current checked-in deployment policy is `config/policy.yml`. A sanitized
+starter policy lives at `config/policy.example.yml`.
 
 Policy is intentionally strict:
 
@@ -277,7 +287,19 @@ as `repository_id` and `repository_owner_id` alongside human-readable
 or renamed; numeric IDs cannot.
 
 Set `strict: true` at the top of the policy file to require `repository_id` in
-every allow rule. The broker will refuse to start if any rule is missing it.
+every allow rule. For tighter policies, use object form to require any stable
+claims everywhere:
+
+```yaml
+strict:
+  required_claims:
+    - repository_id
+    - repository_owner_id
+```
+
+The broker will refuse to start if any allow rule is missing a required claim.
+Capabilities can also declare their own `required_claims`; every grant that
+references that capability must include those claims in each allow rule.
 
 For reusable workflows, prefer adding `job_workflow_ref` to policy rules once
 the caller repos migrate to `cesaregarza/.github`, for example:
@@ -286,9 +308,12 @@ the caller repos migrate to `cesaregarza/.github`, for example:
 grants:
   - allow:
       - repository: cesaregarza/SplatTop
+        repository_id: "123456789"
+        repository_owner_id: "987654321"
         ref: refs/heads/main
         environment: SplatTop
         job_workflow_ref: cesaregarza/.github/.github/workflows/docker-build-docr.yml@refs/heads/main
+        job_workflow_sha: 0123456789abcdef0123456789abcdef01234567
     capabilities:
       - digitalocean-k8s-deploy
 ```
@@ -301,6 +326,12 @@ production policy entry looks like this:
 capabilities:
   digitalocean-k8s-deploy:
     description: DigitalOcean credentials for Kubernetes deployment updates.
+    required_claims:
+      - repository_id
+      - repository_owner_id
+      - ref
+      - environment
+      - job_workflow_ref
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN:
         op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
@@ -314,6 +345,8 @@ grants:
         ref: refs/heads/main
         environment: production
         workflow_ref: owner/my-app/.github/workflows/deploy.yml@refs/heads/main
+        job_workflow_ref: owner/.github/.github/workflows/deploy.yml@refs/heads/main
+        job_workflow_sha: 0123456789abcdef0123456789abcdef01234567
     capabilities:
       - digitalocean-k8s-deploy
 ```
@@ -324,13 +357,13 @@ service env file on the Droplet.
 Deploy policy changes over Tailscale SSH without rebuilding the image:
 
 ```bash
-scripts/deploy-policy.sh config/policy.example.yml
+scripts/deploy-policy.sh config/policy.yml
 ```
 
 If MagicDNS is not available in your shell, pass the Tailscale IP explicitly:
 
 ```bash
-scripts/deploy-policy.sh config/policy.example.yml brokeradmin@100.97.170.7
+scripts/deploy-policy.sh config/policy.yml brokeradmin@100.97.170.7
 ```
 
 The script validates the policy locally, uploads it to a temporary path on the

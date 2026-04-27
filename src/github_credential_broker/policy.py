@@ -29,6 +29,7 @@ class Capability:
     name: str
     description: str
     secrets: tuple[SecretSpec, ...]
+    required_claims: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class Grant:
 class Policy:
     version: int
     strict: bool
+    strict_required_claims: tuple[str, ...]
     audit_claims: tuple[str, ...]
     capabilities: dict[str, Capability]
     grants: tuple[Grant, ...]
@@ -64,9 +66,7 @@ def load_policy(path: Path) -> Policy:
     if raw.get("version") != 1:
         raise ConfigurationError("policy version must be 1")
 
-    strict = raw.get("strict", False)
-    if not isinstance(strict, bool):
-        raise ConfigurationError("strict must be a boolean")
+    strict, strict_required_claims = _parse_strict(raw.get("strict", False))
 
     defaults = _mapping(raw.get("defaults", {}), "defaults")
     audit_claims_raw = defaults.get("audit_claims", [])
@@ -81,14 +81,15 @@ def load_policy(path: Path) -> Policy:
         raise ConfigurationError("policy cannot mix legacy bundles with capabilities/grants")
 
     if uses_legacy_bundles:
-        capabilities, grants = _parse_legacy_bundles(raw, strict)
+        capabilities, grants = _parse_legacy_bundles(raw, strict_required_claims)
     else:
         capabilities = _parse_capabilities(raw)
-        grants = tuple(_parse_grants(raw, capabilities, strict))
+        grants = tuple(_parse_grants(raw, capabilities, strict_required_claims))
 
     return Policy(
         version=1,
         strict=strict,
+        strict_required_claims=strict_required_claims,
         audit_claims=tuple(audit_claims_raw),
         capabilities=capabilities,
         grants=grants,
@@ -144,7 +145,7 @@ def _parse_capabilities(raw: dict[str, Any]) -> dict[str, Capability]:
             )
 
         capability_raw = _mapping(capability_raw_any, f"capabilities.{capability_name}")
-        unknown_keys = set(capability_raw) - {"description", "secrets"}
+        unknown_keys = set(capability_raw) - {"description", "required_claims", "secrets"}
         if unknown_keys:
             keys = ", ".join(sorted(str(key) for key in unknown_keys))
             raise ConfigurationError(f"capabilities.{capability_name} has unsupported keys: {keys}")
@@ -152,6 +153,10 @@ def _parse_capabilities(raw: dict[str, Any]) -> dict[str, Capability]:
         capabilities[capability_name] = Capability(
             name=capability_name,
             description=str(capability_raw.get("description") or ""),
+            required_claims=_parse_required_claims(
+                capability_raw.get("required_claims", []),
+                f"capabilities.{capability_name}.required_claims",
+            ),
             secrets=_parse_secrets(
                 capability_raw.get("secrets", {}),
                 f"capabilities.{capability_name}.secrets",
@@ -163,7 +168,7 @@ def _parse_capabilities(raw: dict[str, Any]) -> dict[str, Capability]:
 
 def _parse_legacy_bundles(
     raw: dict[str, Any],
-    strict: bool,
+    strict_required_claims: tuple[str, ...],
 ) -> tuple[dict[str, Capability], tuple[Grant, ...]]:
     bundles_raw = _mapping(raw.get("bundles", {}), "bundles")
     if not bundles_raw:
@@ -186,6 +191,7 @@ def _parse_legacy_bundles(
         capabilities[bundle_name] = Capability(
             name=bundle_name,
             description=str(bundle_raw.get("description") or ""),
+            required_claims=(),
             secrets=_parse_secrets(
                 bundle_raw.get("secrets", {}),
                 f"bundles.{bundle_name}.secrets",
@@ -197,7 +203,7 @@ def _parse_legacy_bundles(
                 allow=_parse_allow(
                     bundle_raw.get("allow", []),
                     f"bundles.{bundle_name}.allow",
-                    strict,
+                    strict_required_claims,
                 ),
                 capabilities=(bundle_name,),
             )
@@ -209,7 +215,7 @@ def _parse_legacy_bundles(
 def _parse_grants(
     raw: dict[str, Any],
     capabilities: dict[str, Capability],
-    strict: bool,
+    strict_required_claims: tuple[str, ...],
 ) -> list[Grant]:
     grants_raw = raw.get("grants", [])
     if not isinstance(grants_raw, list) or not grants_raw:
@@ -228,10 +234,21 @@ def _parse_grants(
             f"grants[{idx}].capabilities",
             capabilities,
         )
+        allow = _parse_allow(
+            grant_raw.get("allow", []),
+            f"grants[{idx}].allow",
+            strict_required_claims,
+        )
+        _validate_capability_required_claims(
+            allow,
+            capability_names,
+            capabilities,
+            f"grants[{idx}]",
+        )
         grants.append(
             Grant(
                 description=str(grant_raw.get("description") or ""),
-                allow=_parse_allow(grant_raw.get("allow", []), f"grants[{idx}].allow", strict),
+                allow=allow,
                 capabilities=capability_names,
             )
         )
@@ -261,7 +278,11 @@ def _parse_grant_capability_names(
     return tuple(names)
 
 
-def _parse_allow(value: Any, context: str, strict: bool) -> tuple[dict[str, str], ...]:
+def _parse_allow(
+    value: Any,
+    context: str,
+    strict_required_claims: tuple[str, ...],
+) -> tuple[dict[str, str], ...]:
     if not isinstance(value, list) or not value:
         raise ConfigurationError(f"{context} must be non-empty")
 
@@ -281,13 +302,64 @@ def _parse_allow(value: Any, context: str, strict: bool) -> tuple[dict[str, str]
                 raise ConfigurationError(f"{context}[{idx}].{claim_name} cannot use wildcards")
             normalized_rule[claim_name] = expected
 
-        if strict and "repository_id" not in normalized_rule:
-            raise ConfigurationError(
-                f"{context}[{idx}] must include repository_id when policy strict mode is enabled"
-            )
+        for claim_name in strict_required_claims:
+            if claim_name not in normalized_rule:
+                raise ConfigurationError(
+                    f"{context}[{idx}] must include {claim_name} "
+                    "when policy strict mode is enabled"
+                )
         allow.append(normalized_rule)
 
     return tuple(allow)
+
+
+def _parse_strict(value: Any) -> tuple[bool, tuple[str, ...]]:
+    if isinstance(value, bool):
+        return value, ("repository_id",) if value else ()
+
+    strict_raw = _mapping(value, "strict")
+    unknown_keys = set(strict_raw) - {"required_claims"}
+    if unknown_keys:
+        keys = ", ".join(sorted(str(key) for key in unknown_keys))
+        raise ConfigurationError(f"strict has unsupported keys: {keys}")
+
+    required_claims = _parse_required_claims(
+        strict_raw.get("required_claims", []),
+        "strict.required_claims",
+    )
+    return bool(required_claims), required_claims
+
+
+def _parse_required_claims(value: Any, context: str) -> tuple[str, ...]:
+    if value in (None, []):
+        return ()
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ConfigurationError(f"{context} must be a list of claim names")
+    for idx, claim_name in enumerate(value):
+        if not _CLAIM_NAME_RE.fullmatch(claim_name):
+            raise ConfigurationError(f"{context}[{idx}] must be a valid claim name")
+    if len(set(value)) != len(value):
+        raise ConfigurationError(f"{context} must not contain duplicates")
+    return tuple(value)
+
+
+def _validate_capability_required_claims(
+    allow: tuple[dict[str, str], ...],
+    capability_names: tuple[str, ...],
+    capabilities: dict[str, Capability],
+    context: str,
+) -> None:
+    for capability_name in capability_names:
+        required_claims = capabilities[capability_name].required_claims
+        if not required_claims:
+            continue
+        for idx, rule in enumerate(allow):
+            for claim_name in required_claims:
+                if claim_name not in rule:
+                    raise ConfigurationError(
+                        f"{context}.allow[{idx}] must include {claim_name} "
+                        f"because capability {capability_name} requires it"
+                    )
 
 
 def _parse_secrets(value: Any, context: str) -> tuple[SecretSpec, ...]:

@@ -1,9 +1,9 @@
 version: 1
 
-strict: true
-
-# Strict mode requires repository_id in every allow rule. Repository names can
-# be transferred, but IDs cannot.
+strict:
+  required_claims:
+    - repository_id
+    - repository_owner_id
 
 defaults:
   audit_claims:
@@ -16,333 +16,51 @@ defaults:
     - run_attempt
 
 capabilities:
-  digitalocean-k8s-deploy:
-    description: DigitalOcean credentials for Kubernetes deployment updates.
+  app-deploy:
+    description: Cloud credentials for a production deployment workflow.
+    required_claims:
+      - repository_id
+      - repository_owner_id
+      - ref
+      - environment
+      - job_workflow_ref
     secrets:
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
-      DIGITALOCEAN_CLUSTER_ID:
-        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_CLUSTER_ID
-
-  digitalocean-registry-write:
-    description: DigitalOcean token for writing images to DOCR.
-    secrets:
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
-
-  digitalocean-team-search-refresh-runner:
-    description: DigitalOcean token and SSH material for the team-search refresh runner.
-    secrets:
-      DIGITALOCEAN_DATABASE_ID:
-        op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_DATABASE_ID
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_ACCESS_TOKEN
-      DIGITALOCEAN_SSH_KEY_FINGERPRINT:
-        op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_SSH_KEY_FINGERPRINT
-      DIGITALOCEAN_SSH_KEY_ED:
-        op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_SSH_KEY_ED
-
-  postgres-readonly:
-    description: Shared read-only Postgres account URL and schema for read-only data jobs.
-    secrets:
-      RANKINGS_DATABASE_URL:
-        op: op://github-credential-broker-prod/readonly/DATABASE_URL
-      TEAM_SEARCH_SOURCE_DATABASE_URL:
-        op: op://github-credential-broker-prod/readonly/DATABASE_URL
-      RANKINGS_DB_SCHEMA:
-        op: op://github-credential-broker-prod/readonly/RANKINGS_DB_SCHEMA
-
-  rankings-db-write:
-    description: Writable rankings database URL and schema.
-    secrets:
-      RANKINGS_DATABASE_URL:
-        op: op://github-credential-broker-prod/rankings-db/DATABASE_URL_WRITE
-      RANKINGS_DB_SCHEMA:
-        op: op://github-credential-broker-prod/rankings-db/SCHEMA
-
-  team-search-db-write:
-    description: Writable team-search database URL.
-    secrets:
-      TEAM_SEARCH_TARGET_DATABASE_URL:
-        op: op://github-credential-broker-prod/team-search-db/DATABASE_URL_WRITE
-
-  digitalocean-scraper-job-runner:
-    description: DigitalOcean token, SSH key, and allowlisted host IP for scraper-style ephemeral jobs.
-    secrets:
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/digitalocean-scraper-job-runner/DIGITALOCEAN_ACCESS_TOKEN
-      DIGITALOCEAN_SSH_KEY_ED:
-        op: op://github-credential-broker-prod/digitalocean-scraper-job-runner/DIGITALOCEAN_SSH_KEY_ED
-      JOY_IP:
-        op: op://github-credential-broker-prod/digitalocean-scraper-job-runner/JOY_IP
-
-  scraper-postgres-db-write:
-    description: Legacy Postgres credentials for scraper and aggregator jobs.
-    secrets:
-      POSTGRES_USER:
-        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_USER
-      POSTGRES_PASSWORD:
-        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_PASSWORD
-      POSTGRES_HOST:
-        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_HOST
-      POSTGRES_PORT:
-        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_PORT
-      POSTGRES_DB:
-        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_DB
-
-  sendou_api:
-    description: Sendouq API token for rankings and tournament data pulls.
-    secrets:
-      SENDOU_KEY:
-        op: op://github-credential-broker-prod/sendou-api/SENDOU_KEY
-
-  rankings-sentry-reporting:
-    description: Sentry DSN for rankings pipeline error reporting.
-    secrets:
-      SENTRY_DSN:
-        op: op://github-credential-broker-prod/rankings-sentry-reporting/SENTRY_DSN
-
-  rankings-spaces-write:
-    description: DigitalOcean Spaces credentials and destination for rankings artifact uploads.
-    secrets:
-      DIGITALOCEAN_SPACES_KEY:
-        op: op://github-credential-broker-prod/rankings-spaces-write/DIGITALOCEAN_SPACES_KEY
-      DIGITALOCEAN_SPACES_SECRET:
-        op: op://github-credential-broker-prod/rankings-spaces-write/DIGITALOCEAN_SPACES_SECRET
-      DIGITALOCEAN_SPACES_REGION:
-        op: op://github-credential-broker-prod/rankings-spaces-write/DIGITALOCEAN_SPACES_REGION
-      RANKINGS_S3_ENDPOINT:
-        op: op://github-credential-broker-prod/rankings-spaces-write/RANKINGS_S3_ENDPOINT
-      RANKINGS_S3_BUCKET:
-        op: op://github-credential-broker-prod/rankings-spaces-write/RANKINGS_S3_BUCKET
-
-  splatnet3-release-github-write:
-    description: GitHub token for SplatNet3 package release automation and query-hash PR updates.
-    secrets:
-      CI_SN3S_TOKEN:
-        op: op://github-credential-broker-prod/splatnet3-release-github-write/CI_SN3S_TOKEN
-
-  splatnet3-package-pypi-publish:
-    description: PyPI token for publishing the SplatNet3 package.
-    secrets:
-      PYPI_TOKEN:
-        op: op://github-credential-broker-prod/splatnet3-package-pypi-publish/PYPI_TOKEN
+      CLOUD_ACCESS_TOKEN:
+        op: op://github-credential-broker-example/app-deploy/CLOUD_ACCESS_TOKEN
 
   config-repo-write:
-    description: GitHub token for writing deployment config repository updates.
+    description: Token for writing deployment config updates.
     secrets:
-      CONFIG_REPO_TOKEN:
-        op: op://github-credential-broker-prod/config-repo-write/CONFIG_REPO_TOKEN
-
-  digitalocean-spaces-read:
-    description: Read-only DigitalOcean Spaces credentials.
-    secrets:
-      DIGITALOCEAN_SPACES_KEY:
-        op: op://github-credential-broker-prod/digitalocean-spaces-read/DIGITALOCEAN_SPACES_KEY
-      DIGITALOCEAN_SPACES_SECRET:
-        op: op://github-credential-broker-prod/digitalocean-spaces-read/DIGITALOCEAN_SPACES_SECRET
-
-  digitalocean-spaces-write:
-    description: DigitalOcean Spaces credentials for asset and i18n updaters.
-    secrets:
-      DIGITALOCEAN_SPACES_KEY:
-        op: op://github-credential-broker-prod/digitalocean-spaces-write/DIGITALOCEAN_SPACES_KEY
-      DIGITALOCEAN_SPACES_SECRET:
-        op: op://github-credential-broker-prod/digitalocean-spaces-write/DIGITALOCEAN_SPACES_SECRET
+      EXAMPLE_CONFIG_GITHUB_TOKEN:
+        op: op://github-credential-broker-example/config-repo-write/EXAMPLE_CONFIG_GITHUB_TOKEN
 
   broker-smoke-test:
-    description: Non-sensitive broker smoke-test credential for this repository only.
+    description: Non-sensitive broker smoke-test credential.
     secrets:
       TEST_TOKEN:
         env: TEST_TOKEN
 
 grants:
-  - description: SplatTop production deploy workflows.
+  - description: Example production deploy workflow.
     allow:
-      - repository: cesaregarza/SplatTop
-        repository_id: "679054126"
-        repository_owner_id: "40225001"
+      - repository: owner/example-app
+        repository_id: "123456789"
+        repository_owner_id: "987654321"
         ref: refs/heads/main
-        environment: SplatTop
-        workflow_ref: cesaregarza/SplatTop/.github/workflows/update_k8s_deployment.yaml@refs/heads/main
-      - repository: cesaregarza/SplatTop
-        repository_id: "679054126"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: SplatTop
-        workflow_ref: cesaregarza/SplatTop/.github/workflows/monitoring-snapshots.yml@refs/heads/main
-      - repository: cesaregarza/SplatTop
-        repository_id: "679054126"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: SplatTop
-        workflow_ref: cesaregarza/SplatTop/.github/workflows/sync_competition_admins_to_config.yml@refs/heads/main
+        environment: production
+        workflow_ref: owner/example-app/.github/workflows/deploy.yml@refs/heads/main
+        job_workflow_ref: owner/.github/.github/workflows/deploy.yml@refs/heads/main
+        job_workflow_sha: 0123456789abcdef0123456789abcdef01234567
     capabilities:
-      - digitalocean-k8s-deploy
+      - app-deploy
       - config-repo-write
 
-  - description: SplatTop asset updater workflows.
+  - description: Example broker smoke-test workflow.
     allow:
-      - repository: cesaregarza/SplatTop
-        repository_id: "679054126"
-        repository_owner_id: "40225001"
+      - repository: owner/github-credential-broker
+        repository_id: "222222222"
+        repository_owner_id: "987654321"
         ref: refs/heads/main
-        environment: SplatTop
-        workflow_ref: cesaregarza/SplatTop/.github/workflows/update_assets.yml@refs/heads/main
-      - repository: cesaregarza/SplatTop
-        repository_id: "679054126"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: SplatTop
-        workflow_ref: cesaregarza/SplatTop/.github/workflows/update_i18n.yaml@refs/heads/main
-    capabilities:
-      - digitalocean-spaces-write
-
-  - description: SplatVote production deploy workflow.
-    allow:
-      - repository: cesaregarza/SplatVote
-        repository_id: "1126936164"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: default
-        workflow_ref: cesaregarza/SplatVote/.github/workflows/update_splatvote_config.yaml@refs/heads/main
-    capabilities:
-      - digitalocean-k8s-deploy
-      - config-repo-write
-
-  - description: SplatTopBlog production deploy workflow.
-    allow:
-      - repository: cesaregarza/SplatTopBlog
-        repository_id: "1134030800"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: SplatTop
-        workflow_ref: cesaregarza/SplatTopBlog/.github/workflows/deploy.yml@refs/heads/main
-    capabilities:
-      - digitalocean-k8s-deploy
-      - config-repo-write
-
-  - description: SplatTopTeams image publish workflow.
-    allow:
-      - repository: cesaregarza/SplatTopTeams
-        repository_id: "1215338068"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: default
-        workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/verify_and_publish_images.yaml@refs/heads/main
-    capabilities:
-      - digitalocean-registry-write
-
-  - description: SplatTopTeams refresh workflow.
-    allow:
-      - repository: cesaregarza/SplatTopTeams
-        repository_id: "1215338068"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: default
-        workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/run_refresh.yaml@refs/heads/main
-    capabilities:
-      - digitalocean-team-search-refresh-runner
-      - postgres-readonly
-      - team-search-db-write
-
-  - description: Sendouq scraper and aggregator workflows.
-    allow:
-      - repository: cesaregarza/sendouq_analysis
-        repository_id: "728435415"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: Scraper
-        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_scraper.yml@refs/heads/main
-      - repository: cesaregarza/sendouq_analysis
-        repository_id: "728435415"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: Scraper
-        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_aggregator.yml@refs/heads/main
-    capabilities:
-      - digitalocean-scraper-job-runner
-      - scraper-postgres-db-write
-
-  - description: Sendouq rankings workflows.
-    allow:
-      - repository: cesaregarza/sendouq_analysis
-        repository_id: "728435415"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: Scraper
-        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/fix_tournaments.yml@refs/heads/main
-      - repository: cesaregarza/sendouq_analysis
-        repository_id: "728435415"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: Scraper
-        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/repull_tournament.yml@refs/heads/main
-      - repository: cesaregarza/sendouq_analysis
-        repository_id: "728435415"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: Scraper
-        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_weekly_loo.yml@refs/heads/main
-    capabilities:
-      - digitalocean-scraper-job-runner
-      - rankings-db-write
-      - sendou_api
-      - rankings-sentry-reporting
-
-  - description: Sendouq ranked update workflow.
-    allow:
-      - repository: cesaregarza/sendouq_analysis
-        repository_id: "728435415"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: Scraper
-        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_ranked.yml@refs/heads/main
-    capabilities:
-      - digitalocean-scraper-job-runner
-      - rankings-db-write
-      - sendou_api
-      - rankings-sentry-reporting
-      - rankings-spaces-write
-
-  - description: Sendouq scraper image publish workflow.
-    allow:
-      - repository: cesaregarza/sendouq_analysis
-        repository_id: "728435415"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: Scraper
-        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/build_scraper.yml@refs/heads/main
-    capabilities:
-      - digitalocean-registry-write
-
-  - description: SplatNet3_Scraper release workflow.
-    allow:
-      - repository: cesaregarza/SplatNet3_Scraper
-        repository_id: "586660348"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        workflow_ref: cesaregarza/SplatNet3_Scraper/.github/workflows/main.yaml@refs/heads/main
-    capabilities:
-      - splatnet3-release-github-write
-      - splatnet3-package-pypi-publish
-
-  - description: SplatNet3_Scraper query hash update workflow.
-    allow:
-      - repository: cesaregarza/SplatNet3_Scraper
-        repository_id: "586660348"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        workflow_ref: cesaregarza/SplatNet3_Scraper/.github/workflows/refresh_graphql_jsons.yml@refs/heads/main
-    capabilities:
-      - splatnet3-release-github-write
-
-  - description: Broker repository smoke test workflow.
-    allow:
-      - repository: cesaregarza/github-credential-broker
-        repository_id: "1221081539"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        workflow_ref: cesaregarza/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
+        workflow_ref: owner/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
     capabilities:
       - broker-smoke-test

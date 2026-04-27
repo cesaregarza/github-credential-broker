@@ -1,8 +1,8 @@
 container_image = "ghcr.io/OWNER/github-credential-broker:main"
 
 # Point this at the policy that should be copied to the Droplet at first boot.
-# For production, use strict: true and include numeric repository_id values.
-policy_path = "../../config/policy.example.yml"
+# The repository's real deployment policy lives at ../../config/policy.yml.
+policy_path = "../../config/policy.yml"
 
 # Defaults match the intended production deployment:
 # cloudflare_zone_name = "garz.ai"

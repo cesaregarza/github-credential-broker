@@ -63,8 +63,8 @@ container_image = "ghcr.io/cesaregarza/github-credential-broker:main"
 ```
 
 Set `policy_path` to the policy that should be copied to the Droplet at first
-boot. For production, do not use the checked-in example unchanged; use
-`strict: true` and include numeric `repository_id` values in every allow rule.
+boot. The repository's real deployment policy lives at
+`../../config/policy.yml`; the checked-in example is only a sanitized starter.
 
 Do not put secrets in `terraform.tfvars`; local tfvars and Terraform state are
 ignored by Git.
@@ -160,13 +160,13 @@ joined, deploy policy-only changes from the repo root without rebuilding the
 image:
 
 ```bash
-scripts/deploy-policy.sh config/policy.example.yml
+scripts/deploy-policy.sh config/policy.yml
 ```
 
 If MagicDNS is unavailable in your shell, pass the Tailscale IP explicitly:
 
 ```bash
-scripts/deploy-policy.sh config/policy.example.yml brokeradmin@100.97.170.7
+scripts/deploy-policy.sh config/policy.yml brokeradmin@100.97.170.7
 ```
 
 The script validates the policy locally, validates it again with the running

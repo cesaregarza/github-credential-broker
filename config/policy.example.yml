@@ -90,11 +90,11 @@ capabilities:
       POSTGRES_DB:
         op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_DB
 
-  sendouq-api-read:
+  sendou_api:
     description: Sendouq API token for rankings and tournament data pulls.
     secrets:
       SENDOU_KEY:
-        op: op://github-credential-broker-prod/sendouq-api-read/SENDOU_KEY
+        op: op://github-credential-broker-prod/sendou-api/SENDOU_KEY
 
   rankings-sentry-reporting:
     description: Sentry DSN for rankings pipeline error reporting.
@@ -287,7 +287,7 @@ grants:
     capabilities:
       - digitalocean-scraper-job-runner
       - rankings-db-write
-      - sendouq-api-read
+      - sendou_api
       - rankings-sentry-reporting
 
   - description: Sendouq ranked update workflow.
@@ -301,7 +301,7 @@ grants:
     capabilities:
       - digitalocean-scraper-job-runner
       - rankings-db-write
-      - sendouq-api-read
+      - sendou_api
       - rankings-sentry-reporting
       - rankings-spaces-write
 

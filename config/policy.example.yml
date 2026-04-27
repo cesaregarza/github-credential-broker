@@ -42,13 +42,15 @@ capabilities:
       DIGITALOCEAN_SSH_KEY_ED:
         op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_SSH_KEY_ED
 
-  rankings-db-read:
-    description: Read-only rankings database URL and schema.
+  postgres-readonly:
+    description: Shared read-only Postgres account URL and schema for read-only data jobs.
     secrets:
       RANKINGS_DATABASE_URL:
-        op: op://github-credential-broker-prod/rankings-db/DATABASE_URL_READ
+        op: op://github-credential-broker-prod/readonly/DATABASE_URL
+      TEAM_SEARCH_SOURCE_DATABASE_URL:
+        op: op://github-credential-broker-prod/readonly/DATABASE_URL
       RANKINGS_DB_SCHEMA:
-        op: op://github-credential-broker-prod/rankings-db/SCHEMA
+        op: op://github-credential-broker-prod/readonly/RANKINGS_DB_SCHEMA
 
   rankings-db-write:
     description: Writable rankings database URL and schema.
@@ -57,12 +59,6 @@ capabilities:
         op: op://github-credential-broker-prod/rankings-db/DATABASE_URL_WRITE
       RANKINGS_DB_SCHEMA:
         op: op://github-credential-broker-prod/rankings-db/SCHEMA
-
-  team-search-db-read:
-    description: Read-only team-search database URL.
-    secrets:
-      TEAM_SEARCH_SOURCE_DATABASE_URL:
-        op: op://github-credential-broker-prod/team-search-db/DATABASE_URL_READ
 
   team-search-db-write:
     description: Writable team-search database URL.
@@ -247,8 +243,7 @@ grants:
         workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/run_refresh.yaml@refs/heads/main
     capabilities:
       - digitalocean-team-search-refresh-runner
-      - rankings-db-read
-      - team-search-db-read
+      - postgres-readonly
       - team-search-db-write
 
   - description: Sendouq scraper and aggregator workflows.

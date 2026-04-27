@@ -42,17 +42,33 @@ capabilities:
       DIGITALOCEAN_SSH_KEY_ED:
         op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_SSH_KEY_ED
 
-  team-search-refresh-db-write:
-    description: Database URLs and schema for building team-search refresh snapshots.
+  rankings-db-read:
+    description: Read-only rankings database URL and schema.
     secrets:
       RANKINGS_DATABASE_URL:
-        op: op://github-credential-broker-prod/team-search-refresh-db-write/RANKINGS_DATABASE_URL
-      TEAM_SEARCH_SOURCE_DATABASE_URL:
-        op: op://github-credential-broker-prod/team-search-refresh-db-write/TEAM_SEARCH_SOURCE_DATABASE_URL
-      TEAM_SEARCH_TARGET_DATABASE_URL:
-        op: op://github-credential-broker-prod/team-search-refresh-db-write/TEAM_SEARCH_TARGET_DATABASE_URL
+        op: op://github-credential-broker-prod/rankings-db/DATABASE_URL_READ
       RANKINGS_DB_SCHEMA:
-        op: op://github-credential-broker-prod/team-search-refresh-db-write/RANKINGS_DB_SCHEMA
+        op: op://github-credential-broker-prod/rankings-db/SCHEMA
+
+  rankings-db-write:
+    description: Writable rankings database URL and schema.
+    secrets:
+      RANKINGS_DATABASE_URL:
+        op: op://github-credential-broker-prod/rankings-db/DATABASE_URL_WRITE
+      RANKINGS_DB_SCHEMA:
+        op: op://github-credential-broker-prod/rankings-db/SCHEMA
+
+  team-search-db-read:
+    description: Read-only team-search database URL.
+    secrets:
+      TEAM_SEARCH_SOURCE_DATABASE_URL:
+        op: op://github-credential-broker-prod/team-search-db/DATABASE_URL_READ
+
+  team-search-db-write:
+    description: Writable team-search database URL.
+    secrets:
+      TEAM_SEARCH_TARGET_DATABASE_URL:
+        op: op://github-credential-broker-prod/team-search-db/DATABASE_URL_WRITE
 
   digitalocean-scraper-job-runner:
     description: DigitalOcean token, SSH key, and allowlisted host IP for scraper-style ephemeral jobs.
@@ -64,27 +80,19 @@ capabilities:
       JOY_IP:
         op: op://github-credential-broker-prod/digitalocean-scraper-job-runner/JOY_IP
 
-  scraper-postgres-write:
+  scraper-postgres-db-write:
     description: Legacy Postgres credentials for scraper and aggregator jobs.
     secrets:
       POSTGRES_USER:
-        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_USER
+        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_USER
       POSTGRES_PASSWORD:
-        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_PASSWORD
+        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_PASSWORD
       POSTGRES_HOST:
-        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_HOST
+        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_HOST
       POSTGRES_PORT:
-        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_PORT
+        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_PORT
       POSTGRES_DB:
-        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_DB
-
-  rankings-db-write:
-    description: Rankings database URL and schema for rankings pipeline jobs.
-    secrets:
-      RANKINGS_DATABASE_URL:
-        op: op://github-credential-broker-prod/rankings-db-write/RANKINGS_DATABASE_URL
-      RANKINGS_DB_SCHEMA:
-        op: op://github-credential-broker-prod/rankings-db-write/RANKINGS_DB_SCHEMA
+        op: op://github-credential-broker-prod/scraper-postgres-db/POSTGRES_DB
 
   sendouq-api-read:
     description: Sendouq API token for rankings and tournament data pulls.
@@ -239,7 +247,9 @@ grants:
         workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/run_refresh.yaml@refs/heads/main
     capabilities:
       - digitalocean-team-search-refresh-runner
-      - team-search-refresh-db-write
+      - rankings-db-read
+      - team-search-db-read
+      - team-search-db-write
 
   - description: Sendouq scraper and aggregator workflows.
     allow:
@@ -257,7 +267,7 @@ grants:
         workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_aggregator.yml@refs/heads/main
     capabilities:
       - digitalocean-scraper-job-runner
-      - scraper-postgres-write
+      - scraper-postgres-db-write
 
   - description: Sendouq rankings workflows.
     allow:

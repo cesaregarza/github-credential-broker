@@ -30,6 +30,116 @@ capabilities:
       DIGITALOCEAN_ACCESS_TOKEN:
         op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
 
+  xscraper-droplet-ops:
+    description: DigitalOcean token and SSH key for restarting or updating the XScraper droplet.
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/xscraper-droplet-ops/DIGITALOCEAN_ACCESS_TOKEN
+      DIGITALOCEAN_SSH_KEY_ED:
+        op: op://github-credential-broker-prod/xscraper-droplet-ops/DIGITALOCEAN_SSH_KEY_ED
+
+  xscraper-build-secrets:
+    description: XScraper image build-time database, session, config, and Sentry credentials.
+    secrets:
+      POSTGRES_NAME:
+        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_NAME
+      POSTGRES_USER:
+        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_USER
+      POSTGRES_PASSWORD:
+        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_PASSWORD
+      POSTGRES_HOST:
+        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_HOST
+      POSTGRES_PORT:
+        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_PORT
+      SESSION_TOKENS:
+        op: op://github-credential-broker-prod/xscraper-build-secrets/SESSION_TOKENS
+      SCRAPER_SHARED_CONFIG_B64:
+        op: op://github-credential-broker-prod/xscraper-build-secrets/SCRAPER_SHARED_CONFIG_B64
+      SENTRY_DSN:
+        op: op://github-credential-broker-prod/xscraper-build-secrets/SENTRY_DSN
+
+  splattop-teams-refresh:
+    description: Credentials for the SplatTopTeams scheduled refresh droplet and rankings databases.
+    secrets:
+      RANKINGS_DATABASE_URL:
+        op: op://github-credential-broker-prod/splattop-teams-refresh/RANKINGS_DATABASE_URL
+      TEAM_SEARCH_SOURCE_DATABASE_URL:
+        op: op://github-credential-broker-prod/splattop-teams-refresh/TEAM_SEARCH_SOURCE_DATABASE_URL
+      TEAM_SEARCH_TARGET_DATABASE_URL:
+        op: op://github-credential-broker-prod/splattop-teams-refresh/TEAM_SEARCH_TARGET_DATABASE_URL
+      DIGITALOCEAN_DATABASE_ID:
+        op: op://github-credential-broker-prod/splattop-teams-refresh/DIGITALOCEAN_DATABASE_ID
+      RANKINGS_DB_SCHEMA:
+        op: op://github-credential-broker-prod/splattop-teams-refresh/RANKINGS_DB_SCHEMA
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/splattop-teams-refresh/DIGITALOCEAN_ACCESS_TOKEN
+      DIGITALOCEAN_SSH_KEY_FINGERPRINT:
+        op: op://github-credential-broker-prod/splattop-teams-refresh/DIGITALOCEAN_SSH_KEY_FINGERPRINT
+      DIGITALOCEAN_SSH_KEY_ED:
+        op: op://github-credential-broker-prod/splattop-teams-refresh/DIGITALOCEAN_SSH_KEY_ED
+
+  sendouq-digitalocean-ops:
+    description: DigitalOcean token, SSH key, and allowlisted host IP for Sendouq ephemeral jobs.
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/sendouq-digitalocean-ops/DIGITALOCEAN_ACCESS_TOKEN
+      DIGITALOCEAN_SSH_KEY_ED:
+        op: op://github-credential-broker-prod/sendouq-digitalocean-ops/DIGITALOCEAN_SSH_KEY_ED
+      JOY_IP:
+        op: op://github-credential-broker-prod/sendouq-digitalocean-ops/JOY_IP
+
+  sendouq-postgres-write:
+    description: Legacy Postgres credentials for Sendouq scraper and aggregator jobs.
+    secrets:
+      POSTGRES_USER:
+        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_USER
+      POSTGRES_PASSWORD:
+        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_PASSWORD
+      POSTGRES_HOST:
+        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_HOST
+      POSTGRES_PORT:
+        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_PORT
+      POSTGRES_DB:
+        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_DB
+
+  sendouq-rankings-write:
+    description: Rankings database, Sendouq API, and Sentry credentials for Sendouq analysis jobs.
+    secrets:
+      RANKINGS_DATABASE_URL:
+        op: op://github-credential-broker-prod/sendouq-rankings-write/RANKINGS_DATABASE_URL
+      RANKINGS_DB_SCHEMA:
+        op: op://github-credential-broker-prod/sendouq-rankings-write/RANKINGS_DB_SCHEMA
+      SENDOU_KEY:
+        op: op://github-credential-broker-prod/sendouq-rankings-write/SENDOU_KEY
+      SENTRY_DSN:
+        op: op://github-credential-broker-prod/sendouq-rankings-write/SENTRY_DSN
+
+  sendouq-rankings-spaces-write:
+    description: DigitalOcean Spaces credentials and destination for rankings artifact uploads.
+    secrets:
+      DIGITALOCEAN_SPACES_KEY:
+        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/DIGITALOCEAN_SPACES_KEY
+      DIGITALOCEAN_SPACES_SECRET:
+        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/DIGITALOCEAN_SPACES_SECRET
+      DIGITALOCEAN_SPACES_REGION:
+        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/DIGITALOCEAN_SPACES_REGION
+      RANKINGS_S3_ENDPOINT:
+        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/RANKINGS_S3_ENDPOINT
+      RANKINGS_S3_BUCKET:
+        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/RANKINGS_S3_BUCKET
+
+  splatnet3-github-write:
+    description: GitHub token used by SplatNet3_Scraper release and query-hash update workflows.
+    secrets:
+      CI_SN3S_TOKEN:
+        op: op://github-credential-broker-prod/splatnet3-github-write/CI_SN3S_TOKEN
+
+  splatnet3-pypi-publish:
+    description: PyPI token used by the SplatNet3_Scraper publish workflow.
+    secrets:
+      PYPI_TOKEN:
+        op: op://github-credential-broker-prod/splatnet3-pypi-publish/PYPI_TOKEN
+
   config-repo-write:
     description: GitHub token for writing deployment config repository updates.
     secrets:
@@ -134,6 +244,147 @@ grants:
         workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/verify_and_publish_images.yaml@refs/heads/main
     capabilities:
       - digitalocean-registry-write
+
+  - description: SplatTopTeams refresh workflow.
+    allow:
+      - repository: cesaregarza/SplatTopTeams
+        repository_id: "1215338068"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: default
+        workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/run_refresh.yaml@refs/heads/main
+    capabilities:
+      - splattop-teams-refresh
+
+  - description: XScraper build workflow.
+    allow:
+      - repository: cesaregarza/xscraper_new
+        repository_id: "766333369"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: XScraper
+        workflow_ref: cesaregarza/xscraper_new/.github/workflows/build_dockerfile.yml@refs/heads/main
+      - repository: cesaregarza/xscraper_new
+        repository_id: "766333369"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: XScraper
+        workflow_ref: cesaregarza/xscraper_new/.github/workflows/full_update.yaml@refs/heads/main
+        job_workflow_ref: cesaregarza/xscraper_new/.github/workflows/build_dockerfile.yml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+      - xscraper-build-secrets
+
+  - description: XScraper droplet update and restart workflows.
+    allow:
+      - repository: cesaregarza/xscraper_new
+        repository_id: "766333369"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: XScraper
+        workflow_ref: cesaregarza/xscraper_new/.github/workflows/update_dockerfile.yml@refs/heads/main
+      - repository: cesaregarza/xscraper_new
+        repository_id: "766333369"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: XScraper
+        workflow_ref: cesaregarza/xscraper_new/.github/workflows/full_update.yaml@refs/heads/main
+        job_workflow_ref: cesaregarza/xscraper_new/.github/workflows/update_dockerfile.yml@refs/heads/main
+      - repository: cesaregarza/xscraper_new
+        repository_id: "766333369"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: XScraper
+        workflow_ref: cesaregarza/xscraper_new/.github/workflows/restart_docker.yml@refs/heads/main
+    capabilities:
+      - xscraper-droplet-ops
+
+  - description: Sendouq scraper and aggregator workflows.
+    allow:
+      - repository: cesaregarza/sendouq_analysis
+        repository_id: "728435415"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: Scraper
+        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_scraper.yml@refs/heads/main
+      - repository: cesaregarza/sendouq_analysis
+        repository_id: "728435415"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: Scraper
+        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_aggregator.yml@refs/heads/main
+    capabilities:
+      - sendouq-digitalocean-ops
+      - sendouq-postgres-write
+
+  - description: Sendouq rankings workflows.
+    allow:
+      - repository: cesaregarza/sendouq_analysis
+        repository_id: "728435415"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: Scraper
+        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/fix_tournaments.yml@refs/heads/main
+      - repository: cesaregarza/sendouq_analysis
+        repository_id: "728435415"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: Scraper
+        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/repull_tournament.yml@refs/heads/main
+      - repository: cesaregarza/sendouq_analysis
+        repository_id: "728435415"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: Scraper
+        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_weekly_loo.yml@refs/heads/main
+    capabilities:
+      - sendouq-digitalocean-ops
+      - sendouq-rankings-write
+
+  - description: Sendouq ranked update workflow.
+    allow:
+      - repository: cesaregarza/sendouq_analysis
+        repository_id: "728435415"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: Scraper
+        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_ranked.yml@refs/heads/main
+    capabilities:
+      - sendouq-digitalocean-ops
+      - sendouq-rankings-write
+      - sendouq-rankings-spaces-write
+
+  - description: Sendouq scraper image publish workflow.
+    allow:
+      - repository: cesaregarza/sendouq_analysis
+        repository_id: "728435415"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: Scraper
+        workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/build_scraper.yml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+
+  - description: SplatNet3_Scraper release workflow.
+    allow:
+      - repository: cesaregarza/SplatNet3_Scraper
+        repository_id: "586660348"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/SplatNet3_Scraper/.github/workflows/main.yaml@refs/heads/main
+    capabilities:
+      - splatnet3-github-write
+      - splatnet3-pypi-publish
+
+  - description: SplatNet3_Scraper query hash update workflow.
+    allow:
+      - repository: cesaregarza/SplatNet3_Scraper
+        repository_id: "586660348"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/SplatNet3_Scraper/.github/workflows/refresh_graphql_jsons.yml@refs/heads/main
+    capabilities:
+      - splatnet3-github-write
 
   - description: Broker repository smoke test workflow.
     allow:

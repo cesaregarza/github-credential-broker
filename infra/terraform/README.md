@@ -155,6 +155,23 @@ sudo journalctl -u github-credential-broker.service -n 100 --no-pager
 sudo journalctl -u caddy -n 100 --no-pager
 ```
 
+Cloud-init installs `/etc/systemd/journald.conf.d/github-credential-broker.conf`
+with persistent, bounded journald retention:
+
+```ini
+[Journal]
+Storage=persistent
+SystemMaxUse=1G
+SystemKeepFree=1G
+MaxRetentionSec=30day
+```
+
+Those logs survive container restarts and host reboots, but they are still local
+to the Droplet. Production deployments should ship journald off-host with
+Vector, remote syslog, or a managed log agent. Filter for `broker_audit` records
+from `github-credential-broker.service`; those records are structured JSON and
+do not include bearer tokens, raw JWTs, 1Password values, or resolved secrets.
+
 The policy copied at first boot comes from `policy_path`. After Tailscale is
 joined, deploy policy-only changes from the repo root without rebuilding the
 image:
@@ -172,3 +189,9 @@ scripts/deploy-policy.sh config/policy.yml brokeradmin@100.97.170.7
 The script validates the policy locally, validates it again with the running
 broker image on the Droplet, installs it with a timestamped backup, restarts the
 service, and checks `/healthz`.
+
+After bootstrap changes that affect policy or 1Password, also check readiness:
+
+```bash
+curl -fsS https://credentials.garz.ai/readyz
+```

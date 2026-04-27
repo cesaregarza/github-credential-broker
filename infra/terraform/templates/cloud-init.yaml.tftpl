@@ -19,7 +19,7 @@ users:
 %{ endif ~}
 
 bootcmd:
-  - mkdir -p /etc/github-credential-broker /etc/caddy
+  - mkdir -p /etc/github-credential-broker /etc/caddy /etc/systemd/journald.conf.d
 
 packages:
   - apt-transport-https
@@ -51,9 +51,15 @@ write_files:
     permissions: "0644"
     encoding: b64
     content: ${systemd_unit_b64}
+  - path: /etc/systemd/journald.conf.d/github-credential-broker.conf
+    owner: root:root
+    permissions: "0644"
+    encoding: b64
+    content: ${journald_retention_b64}
 
 runcmd:
   - systemctl enable --now docker
+  - systemctl restart systemd-journald
   - - bash
     - -lc
     - |

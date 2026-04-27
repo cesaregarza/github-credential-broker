@@ -6,7 +6,7 @@ import textwrap
 from fastapi.testclient import TestClient
 
 from github_credential_broker.app import create_app
-from github_credential_broker.errors import AuthenticationError
+from github_credential_broker.errors import AuthenticationError, ConfigurationError
 
 
 class FakeVerifier:
@@ -34,6 +34,26 @@ class RaisingVerifier:
 
     def verify(self, token: str):
         raise self._exc
+
+
+class ReadinessSecretStore:
+    def __init__(
+        self,
+        *,
+        cli_available: bool = True,
+        resolution_error: Exception | None = None,
+    ):
+        self._cli_available = cli_available
+        self._resolution_error = resolution_error
+        self.checked_refs: tuple[str, ...] = ()
+
+    def onepassword_cli_available(self) -> bool:
+        return self._cli_available
+
+    def check_onepassword_refs(self, secret_refs):
+        self.checked_refs = tuple(secret_refs)
+        if self._resolution_error is not None:
+            raise self._resolution_error
 
 
 def test_capabilities_endpoint_returns_allowed_credentials(tmp_path, monkeypatch, caplog):
@@ -526,6 +546,129 @@ def test_healthz_returns_ok(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
+
+
+def test_readyz_returns_ok_when_policy_is_usable(tmp_path, monkeypatch):
+    _install_simple_policy(tmp_path, monkeypatch)
+
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/readyz")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+
+
+def test_readyz_returns_503_when_policy_fails_to_load(tmp_path, monkeypatch):
+    monkeypatch.setenv("BROKER_POLICY_PATH", str(tmp_path / "missing.yml"))
+
+    app = create_app()
+    with TestClient(app) as client:
+        health = client.get("/healthz")
+        ready = client.get("/readyz")
+
+    assert health.status_code == 200
+    assert health.json() == {"ok": True}
+    assert ready.status_code == 503
+    assert ready.json() == {"ok": False}
+
+
+def test_readyz_returns_503_when_op_refs_need_missing_cli(tmp_path, monkeypatch):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            capabilities:
+              deploy:
+                secrets:
+                  TOKEN:
+                    op: op://broker/deploy/TOKEN
+            grants:
+              - allow:
+                  - repository: cesaregarza/SplatTop
+                capabilities: [deploy]
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BROKER_POLICY_PATH", str(policy_path))
+    monkeypatch.setenv("BROKER_ONEPASSWORD_CLI_PATH", "definitely-missing-op-cli")
+
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/readyz")
+
+    assert response.status_code == 503
+    assert response.json() == {"ok": False}
+
+
+def test_readyz_optionally_checks_op_secret_resolution(tmp_path, monkeypatch):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            capabilities:
+              deploy:
+                secrets:
+                  TOKEN:
+                    op: op://broker/deploy/TOKEN
+            grants:
+              - allow:
+                  - repository: cesaregarza/SplatTop
+                capabilities: [deploy]
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BROKER_POLICY_PATH", str(policy_path))
+    monkeypatch.setenv("BROKER_READINESS_CHECK_SECRET_RESOLUTION", "true")
+    secret_store = ReadinessSecretStore()
+
+    app = create_app()
+    with TestClient(app) as client:
+        client.app.state.broker.secret_store = secret_store
+        response = client.get("/readyz")
+
+    assert response.status_code == 200
+    assert secret_store.checked_refs == ("op://broker/deploy/TOKEN",)
+
+
+def test_readyz_returns_503_when_optional_op_resolution_fails(tmp_path, monkeypatch):
+    policy_path = tmp_path / "policy.yml"
+    policy_path.write_text(
+        textwrap.dedent(
+            """
+            version: 1
+            capabilities:
+              deploy:
+                secrets:
+                  TOKEN:
+                    op: op://broker/deploy/TOKEN
+            grants:
+              - allow:
+                  - repository: cesaregarza/SplatTop
+                capabilities: [deploy]
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BROKER_POLICY_PATH", str(policy_path))
+    monkeypatch.setenv("BROKER_READINESS_CHECK_SECRET_RESOLUTION", "true")
+    secret_store = ReadinessSecretStore(
+        resolution_error=ConfigurationError(
+            "1Password CLI failed to resolve a broker secret"
+        )
+    )
+
+    app = create_app()
+    with TestClient(app) as client:
+        client.app.state.broker.secret_store = secret_store
+        response = client.get("/readyz")
+
+    assert response.status_code == 503
+    assert response.json() == {"ok": False}
 
 
 def test_docs_are_not_exposed_by_default(tmp_path, monkeypatch):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import time
 from collections.abc import Callable, Sequence
@@ -58,6 +59,13 @@ class SecretStore:
             raise ConfigurationError(f"broker secret environment is missing: {missing_names}")
 
         return resolved
+
+    def onepassword_cli_available(self) -> bool:
+        return shutil.which(self._op_cli_path) is not None
+
+    def check_onepassword_refs(self, secret_refs: Sequence[str]) -> None:
+        for secret_ref in secret_refs:
+            self._read_onepassword_ref(secret_ref)
 
     def _read_onepassword_ref(self, secret_ref: str) -> str:
         now = time.monotonic()

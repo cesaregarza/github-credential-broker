@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     onepassword_cli_path: str = "op"
     onepassword_read_timeout_seconds: int = Field(default=10, ge=1, le=60)
     onepassword_cache_seconds: int = Field(default=60, ge=0, le=3600)
+    readiness_check_secret_resolution: bool = False
     enable_legacy_credentials: bool = False
     rate_limit_enabled: bool = True
     rate_limit_ip_per_minute: int = Field(default=60, ge=1, le=10000)

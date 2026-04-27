@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import FastAPI, Header, HTTPException, Path, Request, Response, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from github_credential_broker.audit import (
@@ -21,6 +22,7 @@ from github_credential_broker.errors import (
 )
 from github_credential_broker.oidc import GitHubOIDCVerifier, extract_bearer_token
 from github_credential_broker.policy import (
+    Policy,
     audit_claims,
     authorize_capabilities,
     load_policy,
@@ -83,7 +85,13 @@ class BrokerState:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.broker = BrokerState(app.state.settings)
+    try:
+        app.state.broker = BrokerState(app.state.settings)
+        app.state.broker_error = None
+    except ConfigurationError as exc:
+        app.state.broker = None
+        app.state.broker_error = exc
+        logger.error("Broker startup configuration error: %s", exc)
     yield
 
 
@@ -107,6 +115,38 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def healthz() -> HealthResponse:
         return HealthResponse(ok=True)
 
+    @app.get("/readyz", response_model=HealthResponse)
+    async def readyz(request: Request) -> HealthResponse | JSONResponse:
+        broker = getattr(request.app.state, "broker", None)
+        if not isinstance(broker, BrokerState):
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"ok": False},
+            )
+        if broker.policy is None or broker.verifier is None:
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"ok": False},
+            )
+
+        onepassword_refs = _onepassword_secret_refs(broker.policy)
+        if onepassword_refs:
+            if not broker.secret_store.onepassword_cli_available():
+                return JSONResponse(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    content={"ok": False},
+                )
+            if broker.settings.readiness_check_secret_resolution:
+                try:
+                    broker.secret_store.check_onepassword_refs(onepassword_refs)
+                except ConfigurationError:
+                    return JSONResponse(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        content={"ok": False},
+                    )
+
+        return HealthResponse(ok=True)
+
     legacy_name_path = Path(min_length=1, max_length=80, pattern=_CAPABILITY_RE.pattern)
 
     @app.post("/v1/capabilities", response_model=CredentialsResponse)
@@ -116,7 +156,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response: Response,
         authorization: Annotated[str | None, Header(alias="Authorization")] = None,
     ) -> CredentialsResponse:
-        broker: BrokerState = request.app.state.broker
+        broker = _broker_or_unavailable(request)
         requested = credentials_request.capabilities
         claims = None
         try:
@@ -206,7 +246,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             bundle_name: str = legacy_name_path,
             authorization: Annotated[str | None, Header(alias="Authorization")] = None,
         ) -> LegacyCredentialsResponse:
-            broker: BrokerState = request.app.state.broker
+            broker = _broker_or_unavailable(request)
             requested = [bundle_name]
             claims = None
             try:
@@ -280,6 +320,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return LegacyCredentialsResponse(bundle=bundle_name, audit=audit, secrets=secrets)
 
     return app
+
+
+def _broker_or_unavailable(request: Request) -> BrokerState:
+    broker = getattr(request.app.state, "broker", None)
+    if not isinstance(broker, BrokerState):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="credential capabilities are temporarily unavailable",
+        )
+    return broker
+
+
+def _onepassword_secret_refs(policy: Policy) -> tuple[str, ...]:
+    refs: list[str] = []
+    seen: set[str] = set()
+    for capability in policy.capabilities.values():
+        for spec in capability.secrets:
+            if spec.source != "op" or spec.value in seen:
+                continue
+            refs.append(spec.value)
+            seen.add(spec.value)
+    return tuple(refs)
 
 
 def _enforce_ip_rate_limit(

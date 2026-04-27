@@ -43,6 +43,7 @@ GitHub Actions job
    ```bash
    uv sync
    uv run github-credential-broker-validate-policy config/policy.yml
+   uv run github-credential-broker-lint-policy config/policy.yml
    ```
 
 5. Deploy the broker, then configure caller workflows with `id-token: write`
@@ -77,6 +78,7 @@ The broker is configured via environment variables prefixed with `BROKER_`.
 | `BROKER_ONEPASSWORD_CLI_PATH` | no | `op` | Path to the 1Password CLI used for `op:` policy secrets. |
 | `BROKER_ONEPASSWORD_READ_TIMEOUT_SECONDS` | no | `10` | Per-secret timeout for `op read`. |
 | `BROKER_ONEPASSWORD_CACHE_SECONDS` | no | `60` | In-memory cache TTL for `op:` secret values. Set `0` to disable. |
+| `BROKER_READINESS_CHECK_SECRET_RESOLUTION` | no | `false` | If `true`, `/readyz` verifies configured `op:` references can be read. Secret values are discarded and never returned. |
 
 If any policy secret uses `op:`, the runtime also needs
 `OP_SERVICE_ACCOUNT_TOKEN` set to a 1Password service account token that can
@@ -149,6 +151,52 @@ legacy route back off.
 
 Generated OpenAPI/Swagger docs are disabled by default. If you need them in a
 non-production environment, set `BROKER_EXPOSE_DOCS=true`.
+
+## Health and Readiness
+
+`GET /healthz` is a cheap liveness check and returns `{"ok": true}` as long as
+the app process can answer.
+
+`GET /readyz` verifies the broker configuration is usable:
+
+- the policy loaded successfully
+- the GitHub OIDC verifier was initialized
+- if the policy references `op://` secrets, the configured 1Password CLI is
+  installed
+- if `BROKER_READINESS_CHECK_SECRET_RESOLUTION=true`, configured `op://`
+  references can be read
+
+Readiness never returns secret values. Keep Caddy or uptime checks on
+`/healthz`; use `/readyz` for deployment validation and alerts that should
+catch bad policy or missing 1Password runtime setup.
+
+## Audit Logging
+
+The broker writes compact JSON audit records to stdout with the `broker_audit`
+prefix for issued credentials and denied authentication, authorization, replay,
+and rate-limit attempts. The records include request metadata, requested
+capability names, failure classes, and verified safe GitHub claims when
+available. They never include bearer tokens, raw JWTs, 1Password values, or
+resolved secret values.
+
+For the Terraform Droplet deployment, cloud-init enables persistent journald
+storage with a bounded local retention policy. Inspect recent broker logs with:
+
+```bash
+sudo journalctl -u github-credential-broker.service -n 100 --no-pager
+```
+
+Local journald retention is not an off-host durable sink. Production operators
+should export the journal to a remote system such as Vector, a managed syslog
+collector, or a log platform. A minimal production recipe is:
+
+1. Keep `/etc/systemd/journald.conf.d/github-credential-broker.conf` with
+   `Storage=persistent` and bounded retention.
+2. Install a host log shipper that reads journald.
+3. Filter on `broker_audit` or the
+   `github-credential-broker.service` systemd unit.
+4. Send logs over TLS to the remote sink and set sink-side retention/alerts for
+   denied authn/authz, replay, and rate-limit events.
 
 ## 1Password
 
@@ -353,6 +401,19 @@ grants:
 
 Use `env:` instead of `op:` only when the secret is present in the broker
 service env file on the Droplet.
+
+Run the policy linter before deploying broad policy changes:
+
+```bash
+uv run github-credential-broker-lint-policy config/policy.yml
+uv run github-credential-broker-lint-policy --strict config/policy.yml
+```
+
+By default the linter exits 0 and prints warnings. Use `--strict` in CI or
+pre-deploy checks when warnings should block. It reports missing stable GitHub
+IDs, production-looking grants without environments, wildcard refs/workflows,
+broad rules that grant multiple high-risk capabilities, and capability names
+that share the same 1Password item path.
 
 Deploy policy changes over Tailscale SSH without rebuilding the image:
 

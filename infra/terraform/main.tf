@@ -19,6 +19,14 @@ locals {
     OP_SERVICE_ACCOUNT_TOKEN=replace-me
   EOT
 
+  journald_retention_config = <<-EOT
+    [Journal]
+    Storage=persistent
+    SystemMaxUse=1G
+    SystemKeepFree=1G
+    MaxRetentionSec=30day
+  EOT
+
   caddyfile = <<-EOT
     ${var.broker_hostname} {
       encode zstd gzip
@@ -90,6 +98,7 @@ resource "digitalocean_droplet" "broker" {
     break_glass_ssh_public_keys = var.break_glass_ssh_public_keys
     broker_env_example_b64      = base64encode(local.broker_env_example)
     caddyfile_b64               = base64encode(local.caddyfile)
+    journald_retention_b64      = base64encode(local.journald_retention_config)
     policy_yaml_b64             = filebase64(local.policy_source_path)
     systemd_unit_b64            = base64encode(local.systemd_unit)
   })

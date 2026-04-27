@@ -30,87 +30,99 @@ capabilities:
       DIGITALOCEAN_ACCESS_TOKEN:
         op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
 
-  splattop-teams-refresh:
-    description: Credentials for the SplatTopTeams scheduled refresh droplet and rankings databases.
+  digitalocean-team-search-refresh-runner:
+    description: DigitalOcean token and SSH material for the team-search refresh runner.
+    secrets:
+      DIGITALOCEAN_DATABASE_ID:
+        op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_DATABASE_ID
+      DIGITALOCEAN_ACCESS_TOKEN:
+        op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_ACCESS_TOKEN
+      DIGITALOCEAN_SSH_KEY_FINGERPRINT:
+        op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_SSH_KEY_FINGERPRINT
+      DIGITALOCEAN_SSH_KEY_ED:
+        op: op://github-credential-broker-prod/digitalocean-team-search-refresh-runner/DIGITALOCEAN_SSH_KEY_ED
+
+  team-search-refresh-db-write:
+    description: Database URLs and schema for building team-search refresh snapshots.
     secrets:
       RANKINGS_DATABASE_URL:
-        op: op://github-credential-broker-prod/splattop-teams-refresh/RANKINGS_DATABASE_URL
+        op: op://github-credential-broker-prod/team-search-refresh-db-write/RANKINGS_DATABASE_URL
       TEAM_SEARCH_SOURCE_DATABASE_URL:
-        op: op://github-credential-broker-prod/splattop-teams-refresh/TEAM_SEARCH_SOURCE_DATABASE_URL
+        op: op://github-credential-broker-prod/team-search-refresh-db-write/TEAM_SEARCH_SOURCE_DATABASE_URL
       TEAM_SEARCH_TARGET_DATABASE_URL:
-        op: op://github-credential-broker-prod/splattop-teams-refresh/TEAM_SEARCH_TARGET_DATABASE_URL
-      DIGITALOCEAN_DATABASE_ID:
-        op: op://github-credential-broker-prod/splattop-teams-refresh/DIGITALOCEAN_DATABASE_ID
+        op: op://github-credential-broker-prod/team-search-refresh-db-write/TEAM_SEARCH_TARGET_DATABASE_URL
       RANKINGS_DB_SCHEMA:
-        op: op://github-credential-broker-prod/splattop-teams-refresh/RANKINGS_DB_SCHEMA
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/splattop-teams-refresh/DIGITALOCEAN_ACCESS_TOKEN
-      DIGITALOCEAN_SSH_KEY_FINGERPRINT:
-        op: op://github-credential-broker-prod/splattop-teams-refresh/DIGITALOCEAN_SSH_KEY_FINGERPRINT
-      DIGITALOCEAN_SSH_KEY_ED:
-        op: op://github-credential-broker-prod/splattop-teams-refresh/DIGITALOCEAN_SSH_KEY_ED
+        op: op://github-credential-broker-prod/team-search-refresh-db-write/RANKINGS_DB_SCHEMA
 
-  sendouq-digitalocean-ops:
-    description: DigitalOcean token, SSH key, and allowlisted host IP for Sendouq ephemeral jobs.
+  digitalocean-scraper-job-runner:
+    description: DigitalOcean token, SSH key, and allowlisted host IP for scraper-style ephemeral jobs.
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/sendouq-digitalocean-ops/DIGITALOCEAN_ACCESS_TOKEN
+        op: op://github-credential-broker-prod/digitalocean-scraper-job-runner/DIGITALOCEAN_ACCESS_TOKEN
       DIGITALOCEAN_SSH_KEY_ED:
-        op: op://github-credential-broker-prod/sendouq-digitalocean-ops/DIGITALOCEAN_SSH_KEY_ED
+        op: op://github-credential-broker-prod/digitalocean-scraper-job-runner/DIGITALOCEAN_SSH_KEY_ED
       JOY_IP:
-        op: op://github-credential-broker-prod/sendouq-digitalocean-ops/JOY_IP
+        op: op://github-credential-broker-prod/digitalocean-scraper-job-runner/JOY_IP
 
-  sendouq-postgres-write:
-    description: Legacy Postgres credentials for Sendouq scraper and aggregator jobs.
+  scraper-postgres-write:
+    description: Legacy Postgres credentials for scraper and aggregator jobs.
     secrets:
       POSTGRES_USER:
-        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_USER
+        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_USER
       POSTGRES_PASSWORD:
-        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_PASSWORD
+        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_PASSWORD
       POSTGRES_HOST:
-        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_HOST
+        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_HOST
       POSTGRES_PORT:
-        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_PORT
+        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_PORT
       POSTGRES_DB:
-        op: op://github-credential-broker-prod/sendouq-postgres-write/POSTGRES_DB
+        op: op://github-credential-broker-prod/scraper-postgres-write/POSTGRES_DB
 
-  sendouq-rankings-write:
-    description: Rankings database, Sendouq API, and Sentry credentials for Sendouq analysis jobs.
+  rankings-db-write:
+    description: Rankings database URL and schema for rankings pipeline jobs.
     secrets:
       RANKINGS_DATABASE_URL:
-        op: op://github-credential-broker-prod/sendouq-rankings-write/RANKINGS_DATABASE_URL
+        op: op://github-credential-broker-prod/rankings-db-write/RANKINGS_DATABASE_URL
       RANKINGS_DB_SCHEMA:
-        op: op://github-credential-broker-prod/sendouq-rankings-write/RANKINGS_DB_SCHEMA
-      SENDOU_KEY:
-        op: op://github-credential-broker-prod/sendouq-rankings-write/SENDOU_KEY
-      SENTRY_DSN:
-        op: op://github-credential-broker-prod/sendouq-rankings-write/SENTRY_DSN
+        op: op://github-credential-broker-prod/rankings-db-write/RANKINGS_DB_SCHEMA
 
-  sendouq-rankings-spaces-write:
+  sendouq-api-read:
+    description: Sendouq API token for rankings and tournament data pulls.
+    secrets:
+      SENDOU_KEY:
+        op: op://github-credential-broker-prod/sendouq-api-read/SENDOU_KEY
+
+  rankings-sentry-reporting:
+    description: Sentry DSN for rankings pipeline error reporting.
+    secrets:
+      SENTRY_DSN:
+        op: op://github-credential-broker-prod/rankings-sentry-reporting/SENTRY_DSN
+
+  rankings-spaces-write:
     description: DigitalOcean Spaces credentials and destination for rankings artifact uploads.
     secrets:
       DIGITALOCEAN_SPACES_KEY:
-        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/DIGITALOCEAN_SPACES_KEY
+        op: op://github-credential-broker-prod/rankings-spaces-write/DIGITALOCEAN_SPACES_KEY
       DIGITALOCEAN_SPACES_SECRET:
-        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/DIGITALOCEAN_SPACES_SECRET
+        op: op://github-credential-broker-prod/rankings-spaces-write/DIGITALOCEAN_SPACES_SECRET
       DIGITALOCEAN_SPACES_REGION:
-        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/DIGITALOCEAN_SPACES_REGION
+        op: op://github-credential-broker-prod/rankings-spaces-write/DIGITALOCEAN_SPACES_REGION
       RANKINGS_S3_ENDPOINT:
-        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/RANKINGS_S3_ENDPOINT
+        op: op://github-credential-broker-prod/rankings-spaces-write/RANKINGS_S3_ENDPOINT
       RANKINGS_S3_BUCKET:
-        op: op://github-credential-broker-prod/sendouq-rankings-spaces-write/RANKINGS_S3_BUCKET
+        op: op://github-credential-broker-prod/rankings-spaces-write/RANKINGS_S3_BUCKET
 
-  splatnet3-github-write:
-    description: GitHub token used by SplatNet3_Scraper release and query-hash update workflows.
+  splatnet3-release-github-write:
+    description: GitHub token for SplatNet3 package release automation and query-hash PR updates.
     secrets:
       CI_SN3S_TOKEN:
-        op: op://github-credential-broker-prod/splatnet3-github-write/CI_SN3S_TOKEN
+        op: op://github-credential-broker-prod/splatnet3-release-github-write/CI_SN3S_TOKEN
 
-  splatnet3-pypi-publish:
-    description: PyPI token used by the SplatNet3_Scraper publish workflow.
+  splatnet3-package-pypi-publish:
+    description: PyPI token for publishing the SplatNet3 package.
     secrets:
       PYPI_TOKEN:
-        op: op://github-credential-broker-prod/splatnet3-pypi-publish/PYPI_TOKEN
+        op: op://github-credential-broker-prod/splatnet3-package-pypi-publish/PYPI_TOKEN
 
   config-repo-write:
     description: GitHub token for writing deployment config repository updates.
@@ -226,7 +238,8 @@ grants:
         environment: default
         workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/run_refresh.yaml@refs/heads/main
     capabilities:
-      - splattop-teams-refresh
+      - digitalocean-team-search-refresh-runner
+      - team-search-refresh-db-write
 
   - description: Sendouq scraper and aggregator workflows.
     allow:
@@ -243,8 +256,8 @@ grants:
         environment: Scraper
         workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_aggregator.yml@refs/heads/main
     capabilities:
-      - sendouq-digitalocean-ops
-      - sendouq-postgres-write
+      - digitalocean-scraper-job-runner
+      - scraper-postgres-write
 
   - description: Sendouq rankings workflows.
     allow:
@@ -267,8 +280,10 @@ grants:
         environment: Scraper
         workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_weekly_loo.yml@refs/heads/main
     capabilities:
-      - sendouq-digitalocean-ops
-      - sendouq-rankings-write
+      - digitalocean-scraper-job-runner
+      - rankings-db-write
+      - sendouq-api-read
+      - rankings-sentry-reporting
 
   - description: Sendouq ranked update workflow.
     allow:
@@ -279,9 +294,11 @@ grants:
         environment: Scraper
         workflow_ref: cesaregarza/sendouq_analysis/.github/workflows/run_ranked.yml@refs/heads/main
     capabilities:
-      - sendouq-digitalocean-ops
-      - sendouq-rankings-write
-      - sendouq-rankings-spaces-write
+      - digitalocean-scraper-job-runner
+      - rankings-db-write
+      - sendouq-api-read
+      - rankings-sentry-reporting
+      - rankings-spaces-write
 
   - description: Sendouq scraper image publish workflow.
     allow:
@@ -302,8 +319,8 @@ grants:
         ref: refs/heads/main
         workflow_ref: cesaregarza/SplatNet3_Scraper/.github/workflows/main.yaml@refs/heads/main
     capabilities:
-      - splatnet3-github-write
-      - splatnet3-pypi-publish
+      - splatnet3-release-github-write
+      - splatnet3-package-pypi-publish
 
   - description: SplatNet3_Scraper query hash update workflow.
     allow:
@@ -313,7 +330,7 @@ grants:
         ref: refs/heads/main
         workflow_ref: cesaregarza/SplatNet3_Scraper/.github/workflows/refresh_graphql_jsons.yml@refs/heads/main
     capabilities:
-      - splatnet3-github-write
+      - splatnet3-release-github-write
 
   - description: Broker repository smoke test workflow.
     allow:

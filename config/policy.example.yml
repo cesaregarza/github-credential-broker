@@ -30,34 +30,6 @@ capabilities:
       DIGITALOCEAN_ACCESS_TOKEN:
         op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
 
-  xscraper-droplet-ops:
-    description: DigitalOcean token and SSH key for restarting or updating the XScraper droplet.
-    secrets:
-      DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/xscraper-droplet-ops/DIGITALOCEAN_ACCESS_TOKEN
-      DIGITALOCEAN_SSH_KEY_ED:
-        op: op://github-credential-broker-prod/xscraper-droplet-ops/DIGITALOCEAN_SSH_KEY_ED
-
-  xscraper-build-secrets:
-    description: XScraper image build-time database, session, config, and Sentry credentials.
-    secrets:
-      POSTGRES_NAME:
-        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_NAME
-      POSTGRES_USER:
-        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_USER
-      POSTGRES_PASSWORD:
-        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_PASSWORD
-      POSTGRES_HOST:
-        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_HOST
-      POSTGRES_PORT:
-        op: op://github-credential-broker-prod/xscraper-build-secrets/POSTGRES_PORT
-      SESSION_TOKENS:
-        op: op://github-credential-broker-prod/xscraper-build-secrets/SESSION_TOKENS
-      SCRAPER_SHARED_CONFIG_B64:
-        op: op://github-credential-broker-prod/xscraper-build-secrets/SCRAPER_SHARED_CONFIG_B64
-      SENTRY_DSN:
-        op: op://github-credential-broker-prod/xscraper-build-secrets/SENTRY_DSN
-
   splattop-teams-refresh:
     description: Credentials for the SplatTopTeams scheduled refresh droplet and rankings databases.
     secrets:
@@ -255,49 +227,6 @@ grants:
         workflow_ref: cesaregarza/SplatTopTeams/.github/workflows/run_refresh.yaml@refs/heads/main
     capabilities:
       - splattop-teams-refresh
-
-  - description: XScraper build workflow.
-    allow:
-      - repository: cesaregarza/xscraper_new
-        repository_id: "766333369"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: XScraper
-        workflow_ref: cesaregarza/xscraper_new/.github/workflows/build_dockerfile.yml@refs/heads/main
-      - repository: cesaregarza/xscraper_new
-        repository_id: "766333369"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: XScraper
-        workflow_ref: cesaregarza/xscraper_new/.github/workflows/full_update.yaml@refs/heads/main
-        job_workflow_ref: cesaregarza/xscraper_new/.github/workflows/build_dockerfile.yml@refs/heads/main
-    capabilities:
-      - digitalocean-registry-write
-      - xscraper-build-secrets
-
-  - description: XScraper droplet update and restart workflows.
-    allow:
-      - repository: cesaregarza/xscraper_new
-        repository_id: "766333369"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: XScraper
-        workflow_ref: cesaregarza/xscraper_new/.github/workflows/update_dockerfile.yml@refs/heads/main
-      - repository: cesaregarza/xscraper_new
-        repository_id: "766333369"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: XScraper
-        workflow_ref: cesaregarza/xscraper_new/.github/workflows/full_update.yaml@refs/heads/main
-        job_workflow_ref: cesaregarza/xscraper_new/.github/workflows/update_dockerfile.yml@refs/heads/main
-      - repository: cesaregarza/xscraper_new
-        repository_id: "766333369"
-        repository_owner_id: "40225001"
-        ref: refs/heads/main
-        environment: XScraper
-        workflow_ref: cesaregarza/xscraper_new/.github/workflows/restart_docker.yml@refs/heads/main
-    capabilities:
-      - xscraper-droplet-ops
 
   - description: Sendouq scraper and aggregator workflows.
     allow:

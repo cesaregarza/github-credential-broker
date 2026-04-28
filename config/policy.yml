@@ -311,6 +311,17 @@ grants:
     capabilities:
       - digitalocean-registry-write
 
+  - description: garz.ai image publish workflow.
+    allow:
+      - repository: cesaregarza/garz-ai
+        repository_id: "1223089773"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: default
+        workflow_ref: cesaregarza/garz-ai/.github/workflows/verify_and_publish_image.yaml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+
   - description: SplatTopTeams refresh workflow.
     allow:
       - repository: cesaregarza/SplatTopTeams

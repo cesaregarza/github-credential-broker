@@ -322,6 +322,17 @@ grants:
     capabilities:
       - digitalocean-registry-write
 
+  - description: spotify-hot-100 image publish workflow.
+    allow:
+      - repository: cesaregarza/spotify-hot-100
+        repository_id: "1238265302"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: default
+        workflow_ref: cesaregarza/spotify-hot-100/.github/workflows/verify_and_publish_image.yaml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+
   - description: SplatTopTeams refresh workflow.
     allow:
       - repository: cesaregarza/SplatTopTeams

@@ -332,6 +332,7 @@ grants:
         workflow_ref: cesaregarza/spotify-hot-100/.github/workflows/verify_and_publish_image.yaml@refs/heads/main
     capabilities:
       - digitalocean-registry-write
+      - config-repo-write
 
   - description: SplatTopTeams refresh workflow.
     allow:

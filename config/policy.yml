@@ -334,6 +334,18 @@ grants:
       - digitalocean-registry-write
       - config-repo-write
 
+  - description: SkyQuiet server image publish workflow.
+    allow:
+      - repository: cesaregarza/skyquiet
+        repository_id: "1240926721"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: default
+        workflow_ref: cesaregarza/skyquiet/.github/workflows/verify_and_publish_server_image.yaml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+      - config-repo-write
+
   - description: SplatTopTeams refresh workflow.
     allow:
       - repository: cesaregarza/SplatTopTeams

@@ -333,6 +333,17 @@ grants:
     capabilities:
       - digitalocean-registry-write
 
+  - description: Agent Workloads image publish workflow.
+    allow:
+      - repository: cesaregarza/agent-workloads
+        repository_id: "1250959955"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: default
+        workflow_ref: cesaregarza/agent-workloads/.github/workflows/publish_image.yaml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+
   - description: spotify-hot-100 image publish workflow.
     allow:
       - repository: cesaregarza/spotify-hot-100

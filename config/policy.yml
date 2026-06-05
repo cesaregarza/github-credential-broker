@@ -259,6 +259,20 @@ grants:
       - digitalocean-k8s-deploy
       - config-repo-write
 
+  - description: Citrus private fork deploy workflows.
+    allow:
+      - repository: cesaregarza/Citrus
+        repository_id: "1260019713"
+        repository_owner_id: "40225001"
+        workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master
+      - repository: cesaregarza/Citrus
+        repository_id: "1260019713"
+        repository_owner_id: "40225001"
+        workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev
+    capabilities:
+      - digitalocean-k8s-deploy
+      - config-repo-write
+
   - description: SplatTop asset updater workflows.
     allow:
       - repository: cesaregarza/SplatTop

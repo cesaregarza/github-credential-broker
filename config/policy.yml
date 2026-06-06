@@ -38,6 +38,14 @@ capabilities:
       DIGITALOCEAN_REGISTRY_TOKEN:
         op: op://github-credential-broker-prod/digitalocean-registry-write/DIGITALOCEAN_REGISTRY_TOKEN
 
+  mandate-contracts-read:
+    description: >-
+      Read-only GitHub token for agent-workloads CI to check out the pinned
+      Mandate contract source and verify vendored schema drift.
+    secrets:
+      MANDATE_CONTRACTS_READ_TOKEN:
+        op: op://github-credential-broker-prod/mandate-contracts-read/MANDATE_CONTRACTS_READ_TOKEN
+
   digitalocean-team-search-refresh-runner:
     description: >-
       DigitalOcean token and SSH material for the team-search refresh runner.
@@ -357,6 +365,16 @@ grants:
         workflow_ref: cesaregarza/agent-workloads/.github/workflows/publish_image.yaml@refs/heads/main
     capabilities:
       - digitalocean-registry-write
+
+  - description: Agent Workloads CI workflow.
+    allow:
+      - repository: cesaregarza/agent-workloads
+        repository_id: "1250959955"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/agent-workloads/.github/workflows/ci.yml@refs/heads/main
+    capabilities:
+      - mandate-contracts-read
 
   - description: spotify-hot-100 image publish workflow.
     allow:

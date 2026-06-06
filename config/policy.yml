@@ -24,7 +24,7 @@ capabilities:
       deploy or snapshot operations.
     secrets:
       DIGITALOCEAN_ACCESS_TOKEN:
-        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACCESS_TOKEN
+        op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_ACESS_TOKEN
       DIGITALOCEAN_KUBERNETES_CLUSTER_ID:
         op: op://github-credential-broker-prod/digitalocean-k8s-deploy/DIGITALOCEAN_KUBERNETES_CLUSTER_ID
 
@@ -277,6 +277,14 @@ grants:
         repository_id: "1260019713"
         repository_owner_id: "40225001"
         workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev
+      - repository: cesaregarza/Citrus
+        repository_id: "1260019713"
+        repository_owner_id: "40225001"
+        job_workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master
+      - repository: cesaregarza/Citrus
+        repository_id: "1260019713"
+        repository_owner_id: "40225001"
+        job_workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev
     capabilities:
       - digitalocean-k8s-deploy
       - config-repo-write

@@ -147,6 +147,55 @@ def test_agent_workloads_ci_contract_access_allows_main_and_pull_requests():
         assert [capability.name for capability in capabilities] == ["mandate-contracts-read"]
 
 
+def test_citrus_private_fork_deploy_access_allows_workflow_and_job_workflow_refs():
+    policy = load_policy(Path("config/policy.yml"))
+    base_claims = {
+        "repository": "cesaregarza/Citrus",
+        "repository_id": "1260019713",
+        "repository_owner_id": "40225001",
+    }
+
+    claim_variants = [
+        {
+            **base_claims,
+            "workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master"
+            ),
+        },
+        {
+            **base_claims,
+            "workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/"
+                "build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev"
+            ),
+        },
+        {
+            **base_claims,
+            "job_workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master"
+            ),
+        },
+        {
+            **base_claims,
+            "job_workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/"
+                "build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev"
+            ),
+        },
+    ]
+
+    for claims in claim_variants:
+        capabilities = authorize_capabilities(
+            policy,
+            ["digitalocean-k8s-deploy", "config-repo-write"],
+            claims,
+        )
+        assert [capability.name for capability in capabilities] == [
+            "digitalocean-k8s-deploy",
+            "config-repo-write",
+        ]
+
+
 def test_load_policy_and_authorize_exact_claims(tmp_path):
     policy_path = tmp_path / "policy.yml"
     policy_path.write_text(

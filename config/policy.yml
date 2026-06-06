@@ -373,6 +373,11 @@ grants:
         repository_owner_id: "40225001"
         ref: refs/heads/main
         workflow_ref: cesaregarza/agent-workloads/.github/workflows/ci.yml@refs/heads/main
+      - repository: cesaregarza/agent-workloads
+        repository_id: "1250959955"
+        repository_owner_id: "40225001"
+        ref: refs/pull/*/merge
+        workflow_ref: cesaregarza/agent-workloads/.github/workflows/ci.yml@refs/pull/*/merge
     capabilities:
       - mandate-contracts-read
 

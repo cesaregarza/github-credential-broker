@@ -117,6 +117,36 @@ def test_real_policy_standardized_secret_names():
         assert {secret.public_name for secret in capability.secrets} == secret_names
 
 
+def test_agent_workloads_ci_contract_access_allows_main_and_pull_requests():
+    policy = load_policy(Path("config/policy.yml"))
+    base_claims = {
+        "repository": "cesaregarza/agent-workloads",
+        "repository_id": "1250959955",
+        "repository_owner_id": "40225001",
+    }
+
+    claim_variants = [
+        {
+            **base_claims,
+            "ref": "refs/heads/main",
+            "workflow_ref": (
+                "cesaregarza/agent-workloads/.github/workflows/ci.yml@refs/heads/main"
+            ),
+        },
+        {
+            **base_claims,
+            "ref": "refs/pull/123/merge",
+            "workflow_ref": (
+                "cesaregarza/agent-workloads/.github/workflows/ci.yml@refs/pull/123/merge"
+            ),
+        },
+    ]
+
+    for claims in claim_variants:
+        capabilities = authorize_capabilities(policy, ["mandate-contracts-read"], claims)
+        assert [capability.name for capability in capabilities] == ["mandate-contracts-read"]
+
+
 def test_load_policy_and_authorize_exact_claims(tmp_path):
     policy_path = tmp_path / "policy.yml"
     policy_path.write_text(

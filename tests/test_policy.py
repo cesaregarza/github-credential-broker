@@ -147,6 +147,32 @@ def test_agent_workloads_ci_contract_access_allows_main_and_pull_requests():
         assert [capability.name for capability in capabilities] == ["mandate-contracts-read"]
 
 
+def test_agent_workloads_publish_access_allows_registry_and_config_repo_write():
+    policy = load_policy(Path("config/policy.yml"))
+    claims = {
+        "repository": "cesaregarza/agent-workloads",
+        "repository_id": "1250959955",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+        "environment": "default",
+        "workflow_ref": (
+            "cesaregarza/agent-workloads/.github/workflows/"
+            "publish_image.yaml@refs/heads/main"
+        ),
+    }
+
+    capabilities = authorize_capabilities(
+        policy,
+        ["digitalocean-registry-write", "config-repo-write"],
+        claims,
+    )
+
+    assert [capability.name for capability in capabilities] == [
+        "digitalocean-registry-write",
+        "config-repo-write",
+    ]
+
+
 def test_citrus_private_fork_deploy_access_allows_workflow_and_job_workflow_refs():
     policy = load_policy(Path("config/policy.yml"))
     base_claims = {

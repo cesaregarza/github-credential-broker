@@ -373,6 +373,7 @@ grants:
         workflow_ref: cesaregarza/agent-workloads/.github/workflows/publish_image.yaml@refs/heads/main
     capabilities:
       - digitalocean-registry-write
+      - config-repo-write
 
   - description: Agent Workloads CI workflow.
     allow:

@@ -211,6 +211,16 @@ capabilities:
       SPLATTOP_CONFIG_GITHUB_TOKEN:
         op: op://github-credential-broker-prod/config-repo-write/SPLATTOP_CONFIG_GITHUB_TOKEN
 
+  sops-drift-gate-decrypt:
+    description: >-
+      Scoped age identity for the config repo's agent-workloads identity digest
+      drift gate. Scope: decrypt only secrets/agent-workloads/runtime-secret.enc.yaml
+      so CI can compare public workload identity code_digest claims; not intended
+      for any other SOPS-managed secret file.
+    secrets:
+      SOPS_DRIFT_GATE_AGE_KEY:
+        op: op://github-credential-broker-prod/sops-drift-gate-decrypt/SOPS_DRIFT_GATE_AGE_KEY
+
   digitalocean-spaces-read:
     description: >-
       Read-only DigitalOcean Spaces credentials. Scope: read objects from the
@@ -389,6 +399,21 @@ grants:
         workflow_ref: cesaregarza/agent-workloads/.github/workflows/ci.yml@refs/pull/*/merge
     capabilities:
       - mandate-contracts-read
+
+  - description: Config repo agent-workloads identity digest drift gate.
+    allow:
+      - repository: cesaregarza/SplatTopConfig
+        repository_id: "1094738678"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/SplatTopConfig/.github/workflows/ci.yaml@refs/heads/main
+      - repository: cesaregarza/SplatTopConfig
+        repository_id: "1094738678"
+        repository_owner_id: "40225001"
+        ref: refs/pull/*/merge
+        workflow_ref: cesaregarza/SplatTopConfig/.github/workflows/ci.yaml@refs/pull/*/merge
+    capabilities:
+      - sops-drift-gate-decrypt
 
   - description: spotify-hot-100 image publish workflow.
     allow:

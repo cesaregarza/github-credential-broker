@@ -173,6 +173,87 @@ def test_agent_workloads_publish_access_allows_registry_and_config_repo_write():
     ]
 
 
+def test_splattopconfig_ci_drift_gate_gets_only_scoped_sops_age_key():
+    policy = load_policy(Path("config/policy.yml"))
+    base_claims = {
+        "repository": "cesaregarza/SplatTopConfig",
+        "repository_id": "1094738678",
+        "repository_owner_id": "40225001",
+    }
+
+    claim_variants = [
+        {
+            **base_claims,
+            "ref": "refs/heads/main",
+            "workflow_ref": (
+                "cesaregarza/SplatTopConfig/.github/workflows/ci.yaml@refs/heads/main"
+            ),
+        },
+        {
+            **base_claims,
+            "ref": "refs/pull/123/merge",
+            "workflow_ref": (
+                "cesaregarza/SplatTopConfig/.github/workflows/ci.yaml@refs/pull/123/merge"
+            ),
+        },
+    ]
+
+    for claims in claim_variants:
+        capabilities = authorize_capabilities(
+            policy,
+            ["sops-drift-gate-decrypt"],
+            claims,
+        )
+        assert [capability.name for capability in capabilities] == [
+            "sops-drift-gate-decrypt"
+        ]
+        assert {secret.public_name for secret in capabilities[0].secrets} == {
+            "SOPS_DRIFT_GATE_AGE_KEY"
+        }
+
+
+def test_splattopconfig_drift_gate_scoped_key_denies_wrong_identity():
+    policy = load_policy(Path("config/policy.yml"))
+
+    with pytest.raises(
+        AuthorizationError,
+        match="identity is not allowed to access credential capabilities",
+    ):
+        authorize_capabilities(
+            policy,
+            ["sops-drift-gate-decrypt"],
+            {
+                "repository": "cesaregarza/agent-workloads",
+                "repository_id": "1250959955",
+                "repository_owner_id": "40225001",
+                "ref": "refs/heads/main",
+                "workflow_ref": (
+                    "cesaregarza/agent-workloads/.github/workflows/"
+                    "publish_image.yaml@refs/heads/main"
+                ),
+            },
+        )
+
+    with pytest.raises(
+        AuthorizationError,
+        match="identity is not allowed to access credential capabilities",
+    ):
+        authorize_capabilities(
+            policy,
+            ["sops-drift-gate-decrypt"],
+            {
+                "repository": "cesaregarza/SplatTopConfig",
+                "repository_id": "1094738678",
+                "repository_owner_id": "40225001",
+                "ref": "refs/heads/main",
+                "workflow_ref": (
+                    "cesaregarza/SplatTopConfig/.github/workflows/"
+                    "deny-plaintext-secrets.yaml@refs/heads/main"
+                ),
+            },
+        )
+
+
 def test_citrus_private_fork_deploy_access_allows_workflow_and_job_workflow_refs():
     policy = load_policy(Path("config/policy.yml"))
     base_claims = {

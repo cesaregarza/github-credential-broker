@@ -396,7 +396,7 @@ grants:
     capabilities:
       - mandate-contracts-read
 
-  - description: Config repo agent-workloads identity digest drift gate.
+  - description: Config repo CI gates for agent-workloads identity drift and deployed Mandate compatibility.
     allow:
       - repository: cesaregarza/SplatTopConfig
         repository_id: "1094738678"
@@ -409,6 +409,7 @@ grants:
         ref: refs/pull/*/merge
         workflow_ref: cesaregarza/SplatTopConfig/.github/workflows/ci.yaml@refs/pull/*/merge
     capabilities:
+      - mandate-contracts-read
       - sops-drift-gate-decrypt
 
   - description: spotify-hot-100 image publish workflow.

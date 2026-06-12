@@ -254,12 +254,14 @@ def test_splattopconfig_drift_gate_scoped_key_denies_wrong_identity():
         )
 
 
-def test_citrus_private_fork_deploy_access_allows_workflow_and_job_workflow_refs():
+def test_citrus_private_fork_deploy_access_requires_master_ref_and_environment():
     policy = load_policy(Path("config/policy.yml"))
     base_claims = {
         "repository": "cesaregarza/Citrus",
         "repository_id": "1260019713",
         "repository_owner_id": "40225001",
+        "ref": "refs/heads/master",
+        "environment": "Citrus",
     }
 
     claim_variants = [
@@ -271,22 +273,8 @@ def test_citrus_private_fork_deploy_access_allows_workflow_and_job_workflow_refs
         },
         {
             **base_claims,
-            "workflow_ref": (
-                "cesaregarza/Citrus/.github/workflows/"
-                "build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev"
-            ),
-        },
-        {
-            **base_claims,
             "job_workflow_ref": (
                 "cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master"
-            ),
-        },
-        {
-            **base_claims,
-            "job_workflow_ref": (
-                "cesaregarza/Citrus/.github/workflows/"
-                "build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev"
             ),
         },
     ]
@@ -301,6 +289,54 @@ def test_citrus_private_fork_deploy_access_allows_workflow_and_job_workflow_refs
             "digitalocean-k8s-deploy",
             "config-repo-write",
         ]
+
+
+@pytest.mark.parametrize("claim_name", ["workflow_ref", "job_workflow_ref"])
+def test_citrus_private_fork_deploy_access_rejects_dev_branch(claim_name: str):
+    policy = load_policy(Path("config/policy.yml"))
+
+    with pytest.raises(
+        AuthorizationError,
+        match="identity is not allowed to access credential capabilities",
+    ):
+        authorize_capabilities(
+            policy,
+            ["digitalocean-k8s-deploy", "config-repo-write"],
+            {
+                "repository": "cesaregarza/Citrus",
+                "repository_id": "1260019713",
+                "repository_owner_id": "40225001",
+                "ref": "refs/heads/codex/deploy-citrus-dev",
+                "environment": "Citrus",
+                claim_name: (
+                    "cesaregarza/Citrus/.github/workflows/"
+                    "build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev"
+                ),
+            },
+        )
+
+
+def test_citrus_private_fork_deploy_access_rejects_missing_environment():
+    policy = load_policy(Path("config/policy.yml"))
+
+    with pytest.raises(
+        AuthorizationError,
+        match="identity is not allowed to access credential capabilities",
+    ):
+        authorize_capabilities(
+            policy,
+            ["digitalocean-k8s-deploy", "config-repo-write"],
+            {
+                "repository": "cesaregarza/Citrus",
+                "repository_id": "1260019713",
+                "repository_owner_id": "40225001",
+                "ref": "refs/heads/master",
+                "workflow_ref": (
+                    "cesaregarza/Citrus/.github/workflows/"
+                    "build-deploy-citrus.yml@refs/heads/master"
+                ),
+            },
+        )
 
 
 def test_load_policy_and_authorize_exact_claims(tmp_path):

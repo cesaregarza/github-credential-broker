@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 import textwrap
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-from github_credential_broker.app import create_app
+from github_credential_broker.app import _log_denial, create_app
 from github_credential_broker.errors import AuthenticationError, ConfigurationError
+from github_credential_broker.settings import Settings
 
 
 class FakeVerifier:
@@ -157,6 +159,42 @@ def test_capabilities_endpoint_denies_wrong_ref(tmp_path, monkeypatch, caplog):
     assert "repository_id" in caplog.text
     assert "679054126" in caplog.text
     assert "secret-value" not in caplog.text
+
+
+def test_citrus_dev_branch_authorization_denial_audit_includes_safe_claims(caplog):
+    request = SimpleNamespace(
+        url=SimpleNamespace(path="/v1/capabilities"),
+        method="POST",
+        client=SimpleNamespace(host="127.0.0.1"),
+        headers={},
+    )
+    broker = SimpleNamespace(settings=Settings(github_oidc_audience="https://broker.test/v1"))
+    caplog.set_level(logging.INFO, logger="github_credential_broker.app")
+
+    _log_denial(
+        broker,
+        request,
+        event="authorization_denied",
+        requested=["digitalocean-k8s-deploy", "config-repo-write"],
+        failure_class="identity_not_allowed",
+        claims={
+            "repository": "cesaregarza/Citrus",
+            "repository_id": "1260019713",
+            "repository_owner_id": "40225001",
+            "ref": "refs/heads/codex/deploy-citrus-dev",
+            "environment": "Citrus",
+            "workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/"
+                "build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev"
+            ),
+        },
+    )
+
+    assert "authorization_denied" in caplog.text
+    assert "cesaregarza/Citrus" in caplog.text
+    assert "refs/heads/codex/deploy-citrus-dev" in caplog.text
+    assert "DIGITALOCEAN_ACCESS_TOKEN" not in caplog.text
+    assert "SPLATTOP_CONFIG_GITHUB_TOKEN" not in caplog.text
 
 
 def test_capabilities_endpoint_logs_authentication_failure(tmp_path, monkeypatch, caplog):

@@ -186,17 +186,62 @@ storage with a bounded local retention policy. Inspect recent broker logs with:
 sudo journalctl -u github-credential-broker.service -n 100 --no-pager
 ```
 
-Local journald retention is not an off-host durable sink. Production operators
-should export the journal to a remote system such as Vector, a managed syslog
-collector, or a log platform. A minimal production recipe is:
+Local journald retention is not an off-host durable sink. The minimal
+production recipe is to run `github-credential-broker-audit-monitor` from an
+off-host machine such as the Pi backup host. The monitor connects to the broker
+over SSH, reads only `github-credential-broker.service` journal lines, filters
+for the `broker_audit` prefix, writes normalized JSONL records to the off-host
+archive directory, checks `/healthz`, and sends a Discord webhook alert when a
+denial/rate-limit burst or sustained health failure is observed.
 
-1. Keep `/etc/systemd/journald.conf.d/github-credential-broker.conf` with
-   `Storage=persistent` and bounded retention.
-2. Install a host log shipper that reads journald.
-3. Filter on `broker_audit` or the
-   `github-credential-broker.service` systemd unit.
-4. Send logs over TLS to the remote sink and set sink-side retention/alerts for
-   denied authn/authz, replay, and rate-limit events.
+Install the package on the off-host machine, copy the example units from
+`infra/systemd/`, and create a root-readable environment file:
+
+```bash
+sudo install -d -o root -g root -m 0750 /var/backups/github-credential-broker/audit
+sudo install -d -o root -g root -m 0750 /var/lib/github-credential-broker-audit-monitor
+sudo install -o root -g root -m 0644 \
+  infra/systemd/github-credential-broker-audit-monitor.service \
+  /etc/systemd/system/github-credential-broker-audit-monitor.service
+sudo install -o root -g root -m 0644 \
+  infra/systemd/github-credential-broker-audit-monitor.timer \
+  /etc/systemd/system/github-credential-broker-audit-monitor.timer
+sudo install -o root -g root -m 0600 /dev/null \
+  /etc/github-credential-broker-audit-monitor.env
+```
+
+Populate `/etc/github-credential-broker-audit-monitor.env` without committing
+it:
+
+```ini
+BROKER_AUDIT_SSH_TARGET=brokeradmin@credentials.garz.ai
+BROKER_AUDIT_ARCHIVE_DIR=/var/backups/github-credential-broker/audit
+BROKER_AUDIT_STATE_FILE=/var/lib/github-credential-broker-audit-monitor/state.json
+BROKER_AUDIT_HEALTH_URL=https://credentials.garz.ai/healthz
+BROKER_AUDIT_DENIAL_THRESHOLD=5
+BROKER_AUDIT_HEALTH_FAILURE_THRESHOLD=3
+BROKER_AUDIT_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+```
+
+Before enabling the timer, verify the off-host machine can read the broker
+journal non-interactively and has a pinned host key:
+
+```bash
+ssh "$BROKER_AUDIT_SSH_TARGET" \
+  sudo journalctl -u github-credential-broker.service -n 1 --no-pager
+```
+
+Then enable the hourly timer:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now github-credential-broker-audit-monitor.timer
+```
+
+The archive intentionally contains only parsed `broker_audit` payloads, not raw
+journald lines. The broker-side audit logger already strips bearer tokens, raw
+JWTs, 1Password values, and resolved secret values; the monitor preserves that
+boundary by ignoring non-audit log lines before writing the off-host copy.
 
 ## 1Password
 

@@ -243,6 +243,44 @@ journald lines. The broker-side audit logger already strips bearer tokens, raw
 JWTs, 1Password values, and resolved secret values; the monitor preserves that
 boundary by ignoring non-audit log lines before writing the off-host copy.
 
+## Agent Workloads Identity Reconciler Dry Run
+
+`github-credential-broker-workload-identity-reconcile` is the read-only first
+slice of the agent-workloads workload identity reconciler. It evaluates one
+SplatTopConfig `bot/agent-workloads-release-*` re-pin branch and reports whether
+a future mint step would be eligible.
+
+This command is intentionally not an authority path:
+
+- it does not expose a broker HTTP endpoint
+- it does not read `op://` secrets or the workload identity HMAC seed
+- it does not decrypt SOPS files
+- it does not mint `mwit_v1` tokens
+- it does not push commits
+
+It validates only non-secret inputs: release pins in SplatTopConfig, the
+registry overlay manifests, the workload identity metadata ledger, changed file
+paths, and an agent-workloads source tarball. It refuses re-pin branches that
+touch `.sops.yaml` or paths outside the narrow re-pin allowlist.
+
+Example:
+
+```bash
+uv run github-credential-broker-workload-identity-reconcile \
+  --splattop-config-repo /srv/SplatTopConfig-pr \
+  --agent-workloads-tarball /tmp/agent-workloads.tar.gz \
+  --head-ref bot/agent-workloads-release-a1fb3e2c7a04 \
+  --source-commit a1fb3e2c7a04 \
+  --agent-workloads-main-head a1fb3e2c7a04 \
+  --changed-path apps/agent-workloads/values.yaml \
+  --changed-path apps/agent-control-plane-registry-overlay/configmap.yaml \
+  --fail-on-refusal
+```
+
+The output is a JSON decision with `status` set to `would_mint`, `refused`, or
+`ignored`. Later CES-98 slices may add minting and commit emission; those slices
+must continue to keep CI away from raw seed material.
+
 ## 1Password
 
 For a DigitalOcean Droplet, use a dedicated 1Password vault such as

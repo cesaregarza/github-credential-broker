@@ -173,7 +173,7 @@ def test_agent_workloads_publish_access_allows_registry_and_config_repo_write():
     ]
 
 
-def test_splattopconfig_ci_drift_gate_gets_only_scoped_sops_age_key():
+def test_splattopconfig_ci_gates_get_scoped_sops_key_and_mandate_read_token():
     policy = load_policy(Path("config/policy.yml"))
     base_claims = {
         "repository": "cesaregarza/SplatTopConfig",
@@ -201,14 +201,22 @@ def test_splattopconfig_ci_drift_gate_gets_only_scoped_sops_age_key():
     for claims in claim_variants:
         capabilities = authorize_capabilities(
             policy,
-            ["sops-drift-gate-decrypt"],
+            ["sops-drift-gate-decrypt", "mandate-contracts-read"],
             claims,
         )
-        assert [capability.name for capability in capabilities] == [
-            "sops-drift-gate-decrypt"
-        ]
-        assert {secret.public_name for secret in capabilities[0].secrets} == {
+        assert {capability.name for capability in capabilities} == {
+            "mandate-contracts-read",
+            "sops-drift-gate-decrypt",
+        }
+        secrets_by_capability = {
+            capability.name: {secret.public_name for secret in capability.secrets}
+            for capability in capabilities
+        }
+        assert secrets_by_capability["sops-drift-gate-decrypt"] == {
             "SOPS_DRIFT_GATE_AGE_KEY"
+        }
+        assert secrets_by_capability["mandate-contracts-read"] == {
+            "MANDATE_CONTRACTS_READ_TOKEN"
         }
 
 

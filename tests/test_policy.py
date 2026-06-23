@@ -105,10 +105,7 @@ def test_real_policy_standardized_secret_names():
         "rankings-sentry-reporting": {"RANKINGS_SENTRY_DSN"},
         "splatnet3-github-write": {"SPLATNET3_GITHUB_TOKEN"},
         "splatnet3-package-pypi-publish": {"SPLATNET3_PYPI_TOKEN"},
-        "config-repo-write": {
-            "GARZAI_CLUSTER_GITHUB_TOKEN",
-            "SPLATTOP_CONFIG_GITHUB_TOKEN",
-        },
+        "config-repo-write": {"GARZAI_CLUSTER_GITHUB_TOKEN"},
         "digitalocean-spaces-write": {
             "DIGITALOCEAN_SPACES_ACCESS_KEY_ID",
             "DIGITALOCEAN_SPACES_SECRET_ACCESS_KEY",

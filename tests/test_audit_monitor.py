@@ -56,7 +56,7 @@ def test_monitor_archives_only_normalized_broker_audit_payloads(tmp_path):
                     "event": "authorization_denied",
                     "failure_class": "policy_miss",
                     "requested_capabilities": ["deploy"],
-                    "audit": {"repository": "cesaregarza/SplatTopConfig"},
+                    "audit": {"repository": "cesaregarza/GarzAICluster"},
                 }
             ),
             "broker_audit not-json",
@@ -72,7 +72,7 @@ def test_monitor_archives_only_normalized_broker_audit_payloads(tmp_path):
     assert archived == [
         {
             "archived_at": "2026-06-12T10:00:00Z",
-            "audit": {"repository": "cesaregarza/SplatTopConfig"},
+            "audit": {"repository": "cesaregarza/GarzAICluster"},
             "event": "authorization_denied",
             "failure_class": "policy_miss",
             "requested_capabilities": ["deploy"],

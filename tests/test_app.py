@@ -194,6 +194,7 @@ def test_citrus_dev_branch_authorization_denial_audit_includes_safe_claims(caplo
     assert "cesaregarza/Citrus" in caplog.text
     assert "refs/heads/codex/deploy-citrus-dev" in caplog.text
     assert "DIGITALOCEAN_ACCESS_TOKEN" not in caplog.text
+    assert "GARZAI_CLUSTER_GITHUB_TOKEN" not in caplog.text
     assert "SPLATTOP_CONFIG_GITHUB_TOKEN" not in caplog.text
 
 

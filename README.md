@@ -334,10 +334,10 @@ jobs:
           done < <(jq -r '.secrets[]' <<< "$response")
 
           do_token="$(jq -r '.secrets.DIGITALOCEAN_ACCESS_TOKEN' <<< "$response")"
-          config_token="$(jq -r '.secrets.SPLATTOP_CONFIG_GITHUB_TOKEN' <<< "$response")"
+          config_token="$(jq -r '.secrets.GARZAI_CLUSTER_GITHUB_TOKEN' <<< "$response")"
           {
             echo "DIGITALOCEAN_ACCESS_TOKEN=$do_token"
-            echo "SPLATTOP_CONFIG_GITHUB_TOKEN=$config_token"
+            echo "GARZAI_CLUSTER_GITHUB_TOKEN=$config_token"
           } >> "$GITHUB_ENV"
 ```
 

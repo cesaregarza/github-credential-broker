@@ -210,7 +210,7 @@ capabilities:
       write access is intended.
     secrets:
       GARZAI_CLUSTER_GITHUB_TOKEN:
-        op: op://github-credential-broker-prod/config-repo-write/SPLATTOP_CONFIG_GITHUB_TOKEN
+        op: op://github-credential-broker-prod/config-repo-write/GARZAI_CLUSTER_GITHUB_TOKEN
 
   sops-drift-gate-decrypt:
     description: >-

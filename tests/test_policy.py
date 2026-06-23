@@ -173,51 +173,53 @@ def test_agent_workloads_publish_access_allows_registry_and_config_repo_write():
     ]
 
 
-def test_splattopconfig_ci_gates_get_scoped_sops_key_and_mandate_read_token():
+def test_config_repo_ci_gates_accept_old_and_new_repo_names_during_rename():
     policy = load_policy(Path("config/policy.yml"))
-    base_claims = {
-        "repository": "cesaregarza/SplatTopConfig",
-        "repository_id": "1094738678",
-        "repository_owner_id": "40225001",
-    }
 
-    claim_variants = [
-        {
-            **base_claims,
-            "ref": "refs/heads/main",
-            "workflow_ref": (
-                "cesaregarza/SplatTopConfig/.github/workflows/ci.yaml@refs/heads/main"
-            ),
-        },
-        {
-            **base_claims,
-            "ref": "refs/pull/123/merge",
-            "workflow_ref": (
-                "cesaregarza/SplatTopConfig/.github/workflows/ci.yaml@refs/pull/123/merge"
-            ),
-        },
-    ]
+    for repo_name in ("SplatTopConfig", "GarzAICluster"):
+        base_claims = {
+            "repository": f"cesaregarza/{repo_name}",
+            "repository_id": "1094738678",
+            "repository_owner_id": "40225001",
+        }
 
-    for claims in claim_variants:
-        capabilities = authorize_capabilities(
-            policy,
-            ["sops-drift-gate-decrypt", "mandate-contracts-read"],
-            claims,
-        )
-        assert {capability.name for capability in capabilities} == {
-            "mandate-contracts-read",
-            "sops-drift-gate-decrypt",
-        }
-        secrets_by_capability = {
-            capability.name: {secret.public_name for secret in capability.secrets}
-            for capability in capabilities
-        }
-        assert secrets_by_capability["sops-drift-gate-decrypt"] == {
-            "SOPS_DRIFT_GATE_AGE_KEY"
-        }
-        assert secrets_by_capability["mandate-contracts-read"] == {
-            "MANDATE_CONTRACTS_READ_TOKEN"
-        }
+        claim_variants = [
+            {
+                **base_claims,
+                "ref": "refs/heads/main",
+                "workflow_ref": (
+                    f"cesaregarza/{repo_name}/.github/workflows/ci.yaml@refs/heads/main"
+                ),
+            },
+            {
+                **base_claims,
+                "ref": "refs/pull/123/merge",
+                "workflow_ref": (
+                    f"cesaregarza/{repo_name}/.github/workflows/ci.yaml@refs/pull/123/merge"
+                ),
+            },
+        ]
+
+        for claims in claim_variants:
+            capabilities = authorize_capabilities(
+                policy,
+                ["sops-drift-gate-decrypt", "mandate-contracts-read"],
+                claims,
+            )
+            assert {capability.name for capability in capabilities} == {
+                "mandate-contracts-read",
+                "sops-drift-gate-decrypt",
+            }
+            secrets_by_capability = {
+                capability.name: {secret.public_name for secret in capability.secrets}
+                for capability in capabilities
+            }
+            assert secrets_by_capability["sops-drift-gate-decrypt"] == {
+                "SOPS_DRIFT_GATE_AGE_KEY"
+            }
+            assert secrets_by_capability["mandate-contracts-read"] == {
+                "MANDATE_CONTRACTS_READ_TOKEN"
+            }
 
 
 def test_splattopconfig_drift_gate_scoped_key_denies_wrong_identity():

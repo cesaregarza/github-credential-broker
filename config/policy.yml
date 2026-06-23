@@ -203,10 +203,11 @@ capabilities:
 
   config-repo-write:
     description: >-
-      GitHub token for SplatTopConfig automation. Scope: checkout, branch,
-      commit, push, and open pull requests against cesaregarza/SplatTopConfig
-      for Helm values, Argo/app config, and competition-admin secret manifests;
-      no caller application repository write access is intended.
+      GitHub token for GarzAICluster config automation. Scope: checkout,
+      branch, commit, push, and open pull requests against
+      cesaregarza/GarzAICluster, formerly cesaregarza/SplatTopConfig, for Helm
+      values, Argo/app config, and competition-admin secret manifests; no
+      caller application repository write access is intended.
     secrets:
       SPLATTOP_CONFIG_GITHUB_TOKEN:
         op: op://github-credential-broker-prod/config-repo-write/SPLATTOP_CONFIG_GITHUB_TOKEN
@@ -408,6 +409,16 @@ grants:
         repository_owner_id: "40225001"
         ref: refs/pull/*/merge
         workflow_ref: cesaregarza/SplatTopConfig/.github/workflows/ci.yaml@refs/pull/*/merge
+      - repository: cesaregarza/GarzAICluster
+        repository_id: "1094738678"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/GarzAICluster/.github/workflows/ci.yaml@refs/heads/main
+      - repository: cesaregarza/GarzAICluster
+        repository_id: "1094738678"
+        repository_owner_id: "40225001"
+        ref: refs/pull/*/merge
+        workflow_ref: cesaregarza/GarzAICluster/.github/workflows/ci.yaml@refs/pull/*/merge
     capabilities:
       - mandate-contracts-read
       - sops-drift-gate-decrypt

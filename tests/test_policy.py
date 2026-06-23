@@ -105,7 +105,10 @@ def test_real_policy_standardized_secret_names():
         "rankings-sentry-reporting": {"RANKINGS_SENTRY_DSN"},
         "splatnet3-github-write": {"SPLATNET3_GITHUB_TOKEN"},
         "splatnet3-package-pypi-publish": {"SPLATNET3_PYPI_TOKEN"},
-        "config-repo-write": {"SPLATTOP_CONFIG_GITHUB_TOKEN"},
+        "config-repo-write": {
+            "GARZAI_CLUSTER_GITHUB_TOKEN",
+            "SPLATTOP_CONFIG_GITHUB_TOKEN",
+        },
         "digitalocean-spaces-write": {
             "DIGITALOCEAN_SPACES_ACCESS_KEY_ID",
             "DIGITALOCEAN_SPACES_SECRET_ACCESS_KEY",
@@ -173,56 +176,55 @@ def test_agent_workloads_publish_access_allows_registry_and_config_repo_write():
     ]
 
 
-def test_config_repo_ci_gates_accept_old_and_new_repo_names_during_rename():
+def test_config_repo_ci_gates_accept_garzaicluster_repo_name():
     policy = load_policy(Path("config/policy.yml"))
 
-    for repo_name in ("SplatTopConfig", "GarzAICluster"):
-        base_claims = {
-            "repository": f"cesaregarza/{repo_name}",
-            "repository_id": "1094738678",
-            "repository_owner_id": "40225001",
+    base_claims = {
+        "repository": "cesaregarza/GarzAICluster",
+        "repository_id": "1094738678",
+        "repository_owner_id": "40225001",
+    }
+
+    claim_variants = [
+        {
+            **base_claims,
+            "ref": "refs/heads/main",
+            "workflow_ref": (
+                "cesaregarza/GarzAICluster/.github/workflows/ci.yaml@refs/heads/main"
+            ),
+        },
+        {
+            **base_claims,
+            "ref": "refs/pull/123/merge",
+            "workflow_ref": (
+                "cesaregarza/GarzAICluster/.github/workflows/ci.yaml@refs/pull/123/merge"
+            ),
+        },
+    ]
+
+    for claims in claim_variants:
+        capabilities = authorize_capabilities(
+            policy,
+            ["sops-drift-gate-decrypt", "mandate-contracts-read"],
+            claims,
+        )
+        assert {capability.name for capability in capabilities} == {
+            "mandate-contracts-read",
+            "sops-drift-gate-decrypt",
+        }
+        secrets_by_capability = {
+            capability.name: {secret.public_name for secret in capability.secrets}
+            for capability in capabilities
+        }
+        assert secrets_by_capability["sops-drift-gate-decrypt"] == {
+            "SOPS_DRIFT_GATE_AGE_KEY"
+        }
+        assert secrets_by_capability["mandate-contracts-read"] == {
+            "MANDATE_CONTRACTS_READ_TOKEN"
         }
 
-        claim_variants = [
-            {
-                **base_claims,
-                "ref": "refs/heads/main",
-                "workflow_ref": (
-                    f"cesaregarza/{repo_name}/.github/workflows/ci.yaml@refs/heads/main"
-                ),
-            },
-            {
-                **base_claims,
-                "ref": "refs/pull/123/merge",
-                "workflow_ref": (
-                    f"cesaregarza/{repo_name}/.github/workflows/ci.yaml@refs/pull/123/merge"
-                ),
-            },
-        ]
 
-        for claims in claim_variants:
-            capabilities = authorize_capabilities(
-                policy,
-                ["sops-drift-gate-decrypt", "mandate-contracts-read"],
-                claims,
-            )
-            assert {capability.name for capability in capabilities} == {
-                "mandate-contracts-read",
-                "sops-drift-gate-decrypt",
-            }
-            secrets_by_capability = {
-                capability.name: {secret.public_name for secret in capability.secrets}
-                for capability in capabilities
-            }
-            assert secrets_by_capability["sops-drift-gate-decrypt"] == {
-                "SOPS_DRIFT_GATE_AGE_KEY"
-            }
-            assert secrets_by_capability["mandate-contracts-read"] == {
-                "MANDATE_CONTRACTS_READ_TOKEN"
-            }
-
-
-def test_splattopconfig_drift_gate_scoped_key_denies_wrong_identity():
+def test_config_repo_drift_gate_scoped_key_denies_wrong_identity():
     policy = load_policy(Path("config/policy.yml"))
 
     with pytest.raises(
@@ -244,6 +246,7 @@ def test_splattopconfig_drift_gate_scoped_key_denies_wrong_identity():
             },
         )
 
+    old_repo_name = "SplatTop" + "Config"
     with pytest.raises(
         AuthorizationError,
         match="identity is not allowed to access credential capabilities",
@@ -252,13 +255,13 @@ def test_splattopconfig_drift_gate_scoped_key_denies_wrong_identity():
             policy,
             ["sops-drift-gate-decrypt"],
             {
-                "repository": "cesaregarza/SplatTopConfig",
+                "repository": f"cesaregarza/{old_repo_name}",
                 "repository_id": "1094738678",
                 "repository_owner_id": "40225001",
                 "ref": "refs/heads/main",
                 "workflow_ref": (
-                    "cesaregarza/SplatTopConfig/.github/workflows/"
-                    "deny-plaintext-secrets.yaml@refs/heads/main"
+                    f"cesaregarza/{old_repo_name}/.github/workflows/"
+                    "ci.yaml@refs/heads/main"
                 ),
             },
         )

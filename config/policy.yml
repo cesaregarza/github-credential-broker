@@ -551,3 +551,14 @@ grants:
         workflow_ref: cesaregarza/github-credential-broker/.github/workflows/broker-smoke-test.yml@refs/heads/main
     capabilities:
       - broker-smoke-test
+
+  - description: GarzAICluster bot image bump workflow (resolve tag -> digest against DOCR; read-only registry use).
+    allow:
+      - repository: cesaregarza/GarzAICluster
+        repository_id: "1094738678"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: config
+        workflow_ref: cesaregarza/GarzAICluster/.github/workflows/bump-image.yml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write

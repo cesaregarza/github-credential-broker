@@ -382,6 +382,16 @@ grants:
       - digitalocean-registry-write
       - config-repo-write
 
+  - description: Hermes image publish workflow.
+    allow:
+      - repository: cesaregarza/hermes
+        repository_id: "1277600531"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/hermes/.github/workflows/publish_image.yaml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+
   - description: Agent Workloads CI workflow.
     allow:
       - repository: cesaregarza/agent-workloads

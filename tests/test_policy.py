@@ -202,10 +202,15 @@ def test_config_repo_ci_gates_accept_garzaicluster_repo_name():
     for claims in claim_variants:
         capabilities = authorize_capabilities(
             policy,
-            ["sops-drift-gate-decrypt", "mandate-contracts-read"],
+            [
+                "sops-drift-gate-decrypt",
+                "mandate-contracts-read",
+                "digitalocean-registry-read",
+            ],
             claims,
         )
         assert {capability.name for capability in capabilities} == {
+            "digitalocean-registry-read",
             "mandate-contracts-read",
             "sops-drift-gate-decrypt",
         }
@@ -218,6 +223,9 @@ def test_config_repo_ci_gates_accept_garzaicluster_repo_name():
         }
         assert secrets_by_capability["mandate-contracts-read"] == {
             "MANDATE_CONTRACTS_READ_TOKEN"
+        }
+        assert secrets_by_capability["digitalocean-registry-read"] == {
+            "DIGITALOCEAN_REGISTRY_TOKEN"
         }
 
 

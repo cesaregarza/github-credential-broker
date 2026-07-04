@@ -38,6 +38,16 @@ capabilities:
       DIGITALOCEAN_REGISTRY_TOKEN:
         op: op://github-credential-broker-prod/digitalocean-registry-write/DIGITALOCEAN_REGISTRY_TOKEN
 
+  digitalocean-registry-read:
+    description: >-
+      DigitalOcean registry reader token. Scope: authenticate to
+      registry.digitalocean.com and read container image manifests from DOCR;
+      no image pushes, Kubernetes, Droplet, or database operations are intended
+      for this capability.
+    secrets:
+      DIGITALOCEAN_REGISTRY_TOKEN:
+        op: op://github-credential-broker-prod/digitalocean-registry-read/DIGITALOCEAN_REGISTRY_TOKEN
+
   mandate-contracts-read:
     description: >-
       Read-only GitHub token for agent-workloads CI to check out the pinned
@@ -410,6 +420,7 @@ grants:
         ref: refs/pull/*/merge
         workflow_ref: cesaregarza/GarzAICluster/.github/workflows/ci.yaml@refs/pull/*/merge
     capabilities:
+      - digitalocean-registry-read
       - mandate-contracts-read
       - sops-drift-gate-decrypt
 

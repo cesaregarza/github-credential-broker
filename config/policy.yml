@@ -400,11 +400,11 @@ grants:
 
   - description: Hermes image publish workflow.
     allow:
-      - repository: cesaregarza/hermes
+      - repository: cesaregarza/hermes-integration
         repository_id: "1277600531"
         repository_owner_id: "40225001"
         ref: refs/heads/main
-        workflow_ref: cesaregarza/hermes/.github/workflows/publish_image.yaml@refs/heads/main
+        workflow_ref: cesaregarza/hermes-integration/.github/workflows/publish_image.yaml@refs/heads/main
     capabilities:
       - digitalocean-registry-write
 

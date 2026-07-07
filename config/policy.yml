@@ -389,12 +389,6 @@ grants:
         ref: refs/heads/main
         environment: default
         workflow_ref: cesaregarza/agent-platform/.github/workflows/publish_image.yaml@refs/heads/main
-      - repository: cesaregarza/agent-platform
-        repository_id: "1246197237"
-        repository_owner_id: "40225001"
-        ref: refs/heads/codex/ces-382-synthetic-trusted-edge
-        environment: default
-        workflow_ref: cesaregarza/agent-platform/.github/workflows/publish_image.yaml@refs/heads/codex/ces-382-synthetic-trusted-edge
     capabilities:
       - digitalocean-registry-write
 

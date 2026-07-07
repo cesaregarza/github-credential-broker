@@ -299,9 +299,21 @@ grants:
       - repository: cesaregarza/Citrus
         repository_id: "1260019713"
         repository_owner_id: "40225001"
+        ref: refs/heads/dev
+        environment: Citrus
+        workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/dev
+      - repository: cesaregarza/Citrus
+        repository_id: "1260019713"
+        repository_owner_id: "40225001"
         ref: refs/heads/master
         environment: Citrus
         job_workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master
+      - repository: cesaregarza/Citrus
+        repository_id: "1260019713"
+        repository_owner_id: "40225001"
+        ref: refs/heads/dev
+        environment: Citrus
+        job_workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/dev
     capabilities:
       - digitalocean-k8s-deploy
       - config-repo-write

@@ -272,45 +272,38 @@ def test_config_repo_drift_gate_scoped_key_denies_wrong_identity():
         )
 
 
-def test_citrus_private_fork_deploy_access_requires_master_ref_and_environment():
+def test_citrus_private_fork_deploy_access_requires_allowed_ref_and_environment():
     policy = load_policy(Path("config/policy.yml"))
     base_claims = {
         "repository": "cesaregarza/Citrus",
         "repository_id": "1260019713",
         "repository_owner_id": "40225001",
-        "ref": "refs/heads/master",
         "environment": "Citrus",
     }
 
-    claim_variants = [
-        {
-            **base_claims,
-            "workflow_ref": (
-                "cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master"
-            ),
-        },
-        {
-            **base_claims,
-            "job_workflow_ref": (
-                "cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master"
-            ),
-        },
-    ]
-
-    for claims in claim_variants:
-        capabilities = authorize_capabilities(
-            policy,
-            ["digitalocean-k8s-deploy", "config-repo-write"],
-            claims,
-        )
-        assert [capability.name for capability in capabilities] == [
-            "digitalocean-k8s-deploy",
-            "config-repo-write",
-        ]
+    for ref in ["refs/heads/master", "refs/heads/dev"]:
+        for claim_name in ["workflow_ref", "job_workflow_ref"]:
+            claims = {
+                **base_claims,
+                "ref": ref,
+                claim_name: (
+                    "cesaregarza/Citrus/.github/workflows/"
+                    f"build-deploy-citrus.yml@{ref}"
+                ),
+            }
+            capabilities = authorize_capabilities(
+                policy,
+                ["digitalocean-k8s-deploy", "config-repo-write"],
+                claims,
+            )
+            assert [capability.name for capability in capabilities] == [
+                "digitalocean-k8s-deploy",
+                "config-repo-write",
+            ]
 
 
 @pytest.mark.parametrize("claim_name", ["workflow_ref", "job_workflow_ref"])
-def test_citrus_private_fork_deploy_access_rejects_dev_branch(claim_name: str):
+def test_citrus_private_fork_deploy_access_rejects_unapproved_branch(claim_name: str):
     policy = load_policy(Path("config/policy.yml"))
 
     with pytest.raises(

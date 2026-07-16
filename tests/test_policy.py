@@ -281,7 +281,7 @@ def test_citrus_private_fork_deploy_access_requires_allowed_ref_and_environment(
         "environment": "Citrus",
     }
 
-    for ref in ["refs/heads/master", "refs/heads/dev"]:
+    for ref in ["refs/heads/main", "refs/heads/dev"]:
         for claim_name in ["workflow_ref", "job_workflow_ref"]:
             claims = {
                 **base_claims,
@@ -302,9 +302,13 @@ def test_citrus_private_fork_deploy_access_requires_allowed_ref_and_environment(
             ]
 
 
+@pytest.mark.parametrize("branch", ["master", "codex/deploy-citrus-dev"])
 @pytest.mark.parametrize("claim_name", ["workflow_ref", "job_workflow_ref"])
-def test_citrus_private_fork_deploy_access_rejects_unapproved_branch(claim_name: str):
+def test_citrus_private_fork_deploy_access_rejects_unapproved_branch(
+    claim_name: str, branch: str
+):
     policy = load_policy(Path("config/policy.yml"))
+    ref = f"refs/heads/{branch}"
 
     with pytest.raises(
         AuthorizationError,
@@ -317,11 +321,11 @@ def test_citrus_private_fork_deploy_access_rejects_unapproved_branch(claim_name:
                 "repository": "cesaregarza/Citrus",
                 "repository_id": "1260019713",
                 "repository_owner_id": "40225001",
-                "ref": "refs/heads/codex/deploy-citrus-dev",
+                "ref": ref,
                 "environment": "Citrus",
                 claim_name: (
                     "cesaregarza/Citrus/.github/workflows/"
-                    "build-deploy-citrus.yml@refs/heads/codex/deploy-citrus-dev"
+                    f"build-deploy-citrus.yml@{ref}"
                 ),
             },
         )
@@ -341,13 +345,106 @@ def test_citrus_private_fork_deploy_access_rejects_missing_environment():
                 "repository": "cesaregarza/Citrus",
                 "repository_id": "1260019713",
                 "repository_owner_id": "40225001",
-                "ref": "refs/heads/master",
+                "ref": "refs/heads/main",
                 "workflow_ref": (
                     "cesaregarza/Citrus/.github/workflows/"
-                    "build-deploy-citrus.yml@refs/heads/master"
+                    "build-deploy-citrus.yml@refs/heads/main"
                 ),
             },
         )
+
+
+@pytest.mark.parametrize(
+    ("claim_name", "claim_value"),
+    [
+        ("repository", "cesaregarza/Citrus-lookalike"),
+        ("repository_id", "1260019714"),
+        ("repository_owner_id", "40225002"),
+    ],
+)
+def test_citrus_private_fork_deploy_access_rejects_wrong_identity(
+    claim_name: str, claim_value: str
+):
+    policy = load_policy(Path("config/policy.yml"))
+    claims = {
+        "repository": "cesaregarza/Citrus",
+        "repository_id": "1260019713",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+        "environment": "Citrus",
+        "workflow_ref": (
+            "cesaregarza/Citrus/.github/workflows/"
+            "build-deploy-citrus.yml@refs/heads/main"
+        ),
+    }
+    claims[claim_name] = claim_value
+
+    with pytest.raises(
+        AuthorizationError,
+        match="identity is not allowed to access credential capabilities",
+    ):
+        authorize_capabilities(
+            policy,
+            ["digitalocean-k8s-deploy", "config-repo-write"],
+            claims,
+        )
+
+
+def test_citrus_private_fork_deploy_grant_is_exact():
+    policy = load_policy(Path("config/policy.yml"))
+    grant = next(
+        grant
+        for grant in policy.grants
+        if grant.description == "Citrus private fork deploy workflows."
+    )
+    base_claims = {
+        "repository": "cesaregarza/Citrus",
+        "repository_id": "1260019713",
+        "repository_owner_id": "40225001",
+        "environment": "Citrus",
+    }
+
+    assert grant.capabilities == ("digitalocean-k8s-deploy", "config-repo-write")
+    assert grant.allow == (
+        {
+            **base_claims,
+            "ref": "refs/heads/main",
+            "workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/"
+                "build-deploy-citrus.yml@refs/heads/main"
+            ),
+        },
+        {
+            **base_claims,
+            "ref": "refs/heads/dev",
+            "workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/"
+                "build-deploy-citrus.yml@refs/heads/dev"
+            ),
+        },
+        {
+            **base_claims,
+            "ref": "refs/heads/main",
+            "job_workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/"
+                "build-deploy-citrus.yml@refs/heads/main"
+            ),
+        },
+        {
+            **base_claims,
+            "ref": "refs/heads/dev",
+            "job_workflow_ref": (
+                "cesaregarza/Citrus/.github/workflows/"
+                "build-deploy-citrus.yml@refs/heads/dev"
+            ),
+        },
+    )
+    assert all(
+        not any(character in rule[claim_name] for character in "*?[")
+        for rule in grant.allow
+        for claim_name in ("ref", "workflow_ref", "job_workflow_ref")
+        if claim_name in rule
+    )
 
 
 def test_load_policy_and_authorize_exact_claims(tmp_path):

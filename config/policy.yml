@@ -293,9 +293,9 @@ grants:
       - repository: cesaregarza/Citrus
         repository_id: "1260019713"
         repository_owner_id: "40225001"
-        ref: refs/heads/master
+        ref: refs/heads/main
         environment: Citrus
-        workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master
+        workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/main
       - repository: cesaregarza/Citrus
         repository_id: "1260019713"
         repository_owner_id: "40225001"
@@ -305,9 +305,9 @@ grants:
       - repository: cesaregarza/Citrus
         repository_id: "1260019713"
         repository_owner_id: "40225001"
-        ref: refs/heads/master
+        ref: refs/heads/main
         environment: Citrus
-        job_workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/master
+        job_workflow_ref: cesaregarza/Citrus/.github/workflows/build-deploy-citrus.yml@refs/heads/main
       - repository: cesaregarza/Citrus
         repository_id: "1260019713"
         repository_owner_id: "40225001"

@@ -173,6 +173,133 @@ def test_agent_workloads_publish_access_allows_registry_and_config_repo_write():
     ]
 
 
+def test_poetry_publish_access_allows_registry_and_config_repo_write():
+    policy = load_policy(Path("config/policy.yml"))
+    claims = {
+        "repository": "cesaregarza/poetry",
+        "repository_id": "1308203462",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+        "environment": "default",
+        "workflow_ref": (
+            "cesaregarza/poetry/.github/workflows/"
+            "verify_and_publish_image.yml@refs/heads/main"
+        ),
+    }
+
+    capabilities = authorize_capabilities(
+        policy,
+        ["digitalocean-registry-write", "config-repo-write"],
+        claims,
+    )
+
+    assert [capability.name for capability in capabilities] == [
+        "digitalocean-registry-write",
+        "config-repo-write",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("claim_name", "claim_value"),
+    [
+        ("repository", "cesaregarza/poetry-lookalike"),
+        ("repository_id", "1308203463"),
+        ("repository_owner_id", "40225002"),
+        ("ref", "refs/heads/develop"),
+        ("environment", "production"),
+        (
+            "workflow_ref",
+            "cesaregarza/poetry/.github/workflows/"
+            "publish_image.yml@refs/heads/main",
+        ),
+        (
+            "workflow_ref",
+            "cesaregarza/poetry/.github/workflows/"
+            "verify_and_publish_image.yml@refs/heads/develop",
+        ),
+    ],
+)
+def test_poetry_publish_access_rejects_nonmatching_claims(
+    claim_name: str, claim_value: str
+):
+    policy = load_policy(Path("config/policy.yml"))
+    claims = {
+        "repository": "cesaregarza/poetry",
+        "repository_id": "1308203462",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+        "environment": "default",
+        "workflow_ref": (
+            "cesaregarza/poetry/.github/workflows/"
+            "verify_and_publish_image.yml@refs/heads/main"
+        ),
+    }
+    claims[claim_name] = claim_value
+
+    with pytest.raises(
+        AuthorizationError,
+        match="identity is not allowed to access credential capabilities",
+    ):
+        authorize_capabilities(
+            policy,
+            ["digitalocean-registry-write", "config-repo-write"],
+            claims,
+        )
+
+
+def test_poetry_publish_access_rejects_missing_environment():
+    policy = load_policy(Path("config/policy.yml"))
+    claims = {
+        "repository": "cesaregarza/poetry",
+        "repository_id": "1308203462",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+        "workflow_ref": (
+            "cesaregarza/poetry/.github/workflows/"
+            "verify_and_publish_image.yml@refs/heads/main"
+        ),
+    }
+
+    with pytest.raises(
+        AuthorizationError,
+        match="identity is not allowed to access credential capabilities",
+    ):
+        authorize_capabilities(
+            policy,
+            ["digitalocean-registry-write", "config-repo-write"],
+            claims,
+        )
+
+
+def test_poetry_publish_access_rejects_entire_request_with_ungranted_capability():
+    policy = load_policy(Path("config/policy.yml"))
+    claims = {
+        "repository": "cesaregarza/poetry",
+        "repository_id": "1308203462",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+        "environment": "default",
+        "workflow_ref": (
+            "cesaregarza/poetry/.github/workflows/"
+            "verify_and_publish_image.yml@refs/heads/main"
+        ),
+    }
+
+    with pytest.raises(
+        AuthorizationError,
+        match="identity is not allowed to access credential capabilities",
+    ):
+        authorize_capabilities(
+            policy,
+            [
+                "digitalocean-registry-write",
+                "config-repo-write",
+                "digitalocean-k8s-deploy",
+            ],
+            claims,
+        )
+
+
 def test_config_repo_ci_gates_accept_garzaicluster_repo_name():
     policy = load_policy(Path("config/policy.yml"))
 

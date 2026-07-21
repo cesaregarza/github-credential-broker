@@ -431,6 +431,18 @@ grants:
       - digitalocean-registry-write
       - config-repo-write
 
+  - description: Poetry image publish workflow.
+    allow:
+      - repository: cesaregarza/poetry
+        repository_id: "1308203462"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: default
+        workflow_ref: cesaregarza/poetry/.github/workflows/verify_and_publish_image.yml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
+      - config-repo-write
+
   - description: Hermes image publish workflow.
     allow:
       - repository: cesaregarza/hermes-integration

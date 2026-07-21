@@ -255,6 +255,33 @@ capabilities:
       DIGITALOCEAN_SPACES_SECRET_ACCESS_KEY:
         op: op://github-credential-broker-prod/digitalocean-spaces-write/DIGITALOCEAN_SPACES_SECRET_ACCESS_KEY
 
+  justflip-sentry-release:
+    description: >-
+      Sentry release credentials for JustFlip (habit-taper). Scope: provide the
+      Sentry org/project slugs, the public client DSN, and a source-map upload
+      auth token scoped to the JustFlip Sentry project, so the EAS-env sync
+      workflow can install them into the EAS production environment; no other
+      Sentry organization operations are intended for this capability.
+    secrets:
+      SENTRY_ORG:
+        op: op://github-credential-broker-prod/justflip-sentry-release/SENTRY_ORG
+      SENTRY_PROJECT:
+        op: op://github-credential-broker-prod/justflip-sentry-release/SENTRY_PROJECT
+      SENTRY_AUTH_TOKEN:
+        op: op://github-credential-broker-prod/justflip-sentry-release/SENTRY_AUTH_TOKEN
+      EXPO_PUBLIC_SENTRY_DSN:
+        op: op://github-credential-broker-prod/justflip-sentry-release/EXPO_PUBLIC_SENTRY_DSN
+
+  justflip-eas-admin:
+    description: >-
+      Expo access token for the JustFlip EAS project. Scope: authenticate
+      eas-cli from the habit-taper sync workflow to manage EAS environment
+      variables (and, if later granted, trigger builds); full-account Expo
+      token, so it is deliberately separated from the Sentry capability.
+    secrets:
+      EXPO_TOKEN:
+        op: op://github-credential-broker-prod/justflip-eas-admin/EXPO_TOKEN
+
   broker-smoke-test:
     description: >-
       Non-sensitive broker smoke-test credential. Scope: return TEST_TOKEN for
@@ -406,11 +433,11 @@ grants:
 
   - description: Hermes image publish workflow.
     allow:
-      - repository: cesaregarza/hermes
+      - repository: cesaregarza/hermes-integration
         repository_id: "1277600531"
         repository_owner_id: "40225001"
         ref: refs/heads/main
-        workflow_ref: cesaregarza/hermes/.github/workflows/publish_image.yaml@refs/heads/main
+        workflow_ref: cesaregarza/hermes-integration/.github/workflows/publish_image.yaml@refs/heads/main
     capabilities:
       - digitalocean-registry-write
 
@@ -595,3 +622,14 @@ grants:
         workflow_ref: cesaregarza/GarzAICluster/.github/workflows/bump-image.yml@refs/heads/main
     capabilities:
       - digitalocean-registry-write
+
+  - description: JustFlip EAS environment sync workflow (installs Sentry release credentials into the EAS production environment).
+    allow:
+      - repository: cesaregarza/habit-taper
+        repository_id: "1169504065"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        workflow_ref: cesaregarza/habit-taper/.github/workflows/sync-eas-env.yml@refs/heads/main
+    capabilities:
+      - justflip-sentry-release
+      - justflip-eas-admin

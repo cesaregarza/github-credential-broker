@@ -374,7 +374,7 @@ grants:
       - digitalocean-k8s-deploy
       - config-repo-write
 
-  - description: SplatTopBlog production deploy workflow.
+  - description: cegarza.com deploy workflow repository rename bridge.
     allow:
       - repository: cesaregarza/SplatTopBlog
         repository_id: "1134030800"
@@ -382,8 +382,26 @@ grants:
         ref: refs/heads/main
         environment: SplatTop
         workflow_ref: cesaregarza/SplatTopBlog/.github/workflows/deploy.yml@refs/heads/main
+      - repository: cesaregarza/cegarza.com
+        repository_id: "1134030800"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: SplatTop
+        workflow_ref: cesaregarza/cegarza.com/.github/workflows/deploy.yml@refs/heads/main
     capabilities:
       - digitalocean-k8s-deploy
+      - config-repo-write
+
+  - description: cegarza.com final image publish workflow.
+    allow:
+      - repository: cesaregarza/cegarza.com
+        repository_id: "1134030800"
+        repository_owner_id: "40225001"
+        ref: refs/heads/main
+        environment: cegarza.com
+        workflow_ref: cesaregarza/cegarza.com/.github/workflows/deploy.yml@refs/heads/main
+    capabilities:
+      - digitalocean-registry-write
       - config-repo-write
 
   - description: SplatTopTeams image publish workflow.

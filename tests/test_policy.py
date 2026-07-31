@@ -574,6 +574,122 @@ def test_citrus_private_fork_deploy_grant_is_exact():
     )
 
 
+def test_cegarza_repository_rename_transition_is_exact():
+    policy = load_policy(Path("config/policy.yml"))
+    bridge_grant = next(
+        grant
+        for grant in policy.grants
+        if grant.description
+        == "cegarza.com deploy workflow repository rename bridge."
+    )
+    final_grant = next(
+        grant
+        for grant in policy.grants
+        if grant.description == "cegarza.com final image publish workflow."
+    )
+    stable_claims = {
+        "repository_id": "1134030800",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+    }
+
+    assert bridge_grant.capabilities == (
+        "digitalocean-k8s-deploy",
+        "config-repo-write",
+    )
+    assert bridge_grant.allow == (
+        {
+            **stable_claims,
+            "repository": "cesaregarza/SplatTopBlog",
+            "environment": "SplatTop",
+            "workflow_ref": (
+                "cesaregarza/SplatTopBlog/.github/workflows/"
+                "deploy.yml@refs/heads/main"
+            ),
+        },
+        {
+            **stable_claims,
+            "repository": "cesaregarza/cegarza.com",
+            "environment": "SplatTop",
+            "workflow_ref": (
+                "cesaregarza/cegarza.com/.github/workflows/"
+                "deploy.yml@refs/heads/main"
+            ),
+        },
+    )
+    assert final_grant.capabilities == (
+        "digitalocean-registry-write",
+        "config-repo-write",
+    )
+    assert final_grant.allow == (
+        {
+            **stable_claims,
+            "repository": "cesaregarza/cegarza.com",
+            "environment": "cegarza.com",
+            "workflow_ref": (
+                "cesaregarza/cegarza.com/.github/workflows/"
+                "deploy.yml@refs/heads/main"
+            ),
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    ("claim_name", "claim_value"),
+    [
+        ("repository", "cesaregarza/cegarza-com"),
+        ("repository_id", "1134030801"),
+        ("repository_owner_id", "40225002"),
+        ("ref", "refs/heads/develop"),
+        ("environment", "production"),
+        (
+            "workflow_ref",
+            "cesaregarza/cegarza.com/.github/workflows/deploy.yaml@refs/heads/main",
+        ),
+    ],
+)
+def test_cegarza_final_identity_rejects_wrong_claim(
+    claim_name: str,
+    claim_value: str,
+):
+    policy = load_policy(Path("config/policy.yml"))
+    claims = {
+        "repository": "cesaregarza/cegarza.com",
+        "repository_id": "1134030800",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+        "environment": "cegarza.com",
+        "workflow_ref": (
+            "cesaregarza/cegarza.com/.github/workflows/"
+            "deploy.yml@refs/heads/main"
+        ),
+    }
+    claims[claim_name] = claim_value
+
+    with pytest.raises(AuthorizationError):
+        authorize_capabilities(policy, ["digitalocean-registry-write"], claims)
+
+
+def test_cegarza_final_identity_cannot_request_cluster_deploy():
+    policy = load_policy(Path("config/policy.yml"))
+    claims = {
+        "repository": "cesaregarza/cegarza.com",
+        "repository_id": "1134030800",
+        "repository_owner_id": "40225001",
+        "ref": "refs/heads/main",
+        "environment": "cegarza.com",
+        "workflow_ref": (
+            "cesaregarza/cegarza.com/.github/workflows/"
+            "deploy.yml@refs/heads/main"
+        ),
+    }
+
+    authorize_capabilities(policy, ["digitalocean-registry-write"], claims)
+    authorize_capabilities(policy, ["config-repo-write"], claims)
+    with pytest.raises(AuthorizationError):
+        authorize_capabilities(policy, ["digitalocean-k8s-deploy"], claims)
+
+
 def test_load_policy_and_authorize_exact_claims(tmp_path):
     policy_path = tmp_path / "policy.yml"
     policy_path.write_text(
